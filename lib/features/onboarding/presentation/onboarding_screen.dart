@@ -63,7 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onGetStarted() {
-    context.go('/counter');
+    context.go('/sign-in');
   }
 
   @override

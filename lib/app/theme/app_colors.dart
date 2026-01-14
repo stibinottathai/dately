@@ -6,6 +6,7 @@ class AppColors {
   static const Color backgroundLight = Color(0xFFF8F6F7);
   static const Color backgroundDark = Color(0xFF221018);
   static const Color white = Colors.white;
+  static const Color gold = Color(0xFFD4AF37);
 
   static const LinearGradient splashGradient = LinearGradient(
     begin: Alignment.topCenter,

@@ -83,6 +83,6 @@ class SignUpNotifier extends _$SignUpNotifier {
   // Placeholder for submission
   Future<void> submit() async {
     // TODO: Implement API call
-    print('Submitting Sign Up: $state');
+    // print('Submitting Sign Up: $state');
   }
 }

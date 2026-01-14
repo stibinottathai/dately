@@ -1,9 +1,9 @@
-import 'package:dately/features/counter/presentation/counter_screen.dart';
 import 'package:dately/features/auth/presentation/sign_in_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_1_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_2_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_3_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_4_screen.dart';
+import 'package:dately/features/discovery/presentation/discovery_screen.dart';
 import 'package:dately/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:dately/features/splash/presentation/splash_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,7 +44,7 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(
         path: '/counter',
-        builder: (context, state) => const CounterScreen(),
+        builder: (context, state) => const DiscoveryScreen(),
       ),
     ],
   );

@@ -1,9 +1,14 @@
-import 'package:dately/features/counter/presentation/counter_screen.dart';
 import 'package:dately/features/auth/presentation/sign_in_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_1_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_2_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_3_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_4_screen.dart';
+import 'package:dately/features/discovery/presentation/discovery_screen.dart';
+import 'package:dately/features/likes/presentation/likes_screen.dart';
+import 'package:dately/features/main/presentation/main_screen.dart';
+import 'package:dately/features/messages/presentation/chat_screen.dart';
+import 'package:dately/features/messages/presentation/messages_screen.dart';
+import 'package:dately/features/profile/presentation/edit_profile_screen.dart';
 import 'package:dately/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:dately/features/splash/presentation/splash_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,9 +47,28 @@ GoRouter router(Ref ref) {
         path: '/sign-up/step-4',
         builder: (context, state) => const SignUpStep4Screen(),
       ),
+      GoRoute(path: '/counter', redirect: (context, state) => '/main/0'),
       GoRoute(
-        path: '/counter',
-        builder: (context, state) => const CounterScreen(),
+        path: '/main/:index',
+        builder: (context, state) {
+          final index = int.tryParse(state.pathParameters['index'] ?? '0') ?? 0;
+          return MainScreen(initialIndex: index);
+        },
+      ),
+      GoRoute(
+        path: '/chat/:conversationId',
+        builder: (context, state) {
+          final conversationId = state.pathParameters['conversationId']!;
+          final conversationData = state.extra;
+          return ChatScreen(
+            conversationId: conversationId,
+            conversationData: conversationData,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
   );

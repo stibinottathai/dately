@@ -5,9 +5,12 @@ import 'package:dately/features/discovery/presentation/advanced_filters_screen.d
 import 'package:dately/features/discovery/presentation/widgets/profile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class DiscoveryScreen extends StatefulWidget {
-  const DiscoveryScreen({super.key});
+  final bool showBottomNav;
+
+  const DiscoveryScreen({super.key, this.showBottomNav = true});
 
   @override
   State<DiscoveryScreen> createState() => _DiscoveryScreenState();
@@ -208,12 +211,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                     builder: (context, constraints) {
                       return Stack(
                         alignment: Alignment.center,
-                        children: _profiles.reversed.map((profile) {
-                          final isTop = profile == _profiles.first;
-                          return isTop
-                              ? _buildTopCard(profile, constraints)
-                              : _buildBackgroundCard(profile, constraints);
-                        }).toList(),
+                        children: [
+                          // Render cards from back to front (reversed order for z-index)
+                          for (int i = _profiles.length - 1; i >= 0; i--)
+                            if (i == 0)
+                              _buildTopCard(_profiles[i], constraints)
+                            else if (i <= 2)
+                              _buildBackgroundCard(
+                                _profiles[i],
+                                i,
+                                constraints,
+                              ),
+                        ],
                       );
                     },
                   ),
@@ -255,7 +264,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           ),
 
           // Bottom Navigation
-          _buildBottomNav(),
+          if (widget.showBottomNav) _buildBottomNav(),
         ],
       ),
     );
@@ -409,25 +418,26 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
     );
   }
 
-  Widget _buildBackgroundCard(Profile profile, BoxConstraints constraints) {
-    // Simple logic to just show one card behind reduced
-    final index = _profiles.indexOf(profile);
-    if (index > 1) return const SizedBox.shrink(); // Only show next card
+  Widget _buildBackgroundCard(
+    Profile profile,
+    int index,
+    BoxConstraints constraints,
+  ) {
+    // Calculate scale and offset based on position
+    final scale = 1.0 - (index * 0.05);
+    final offsetY = index * 10.0;
 
     return Positioned.fill(
       child: Align(
         alignment: Alignment.topCenter,
         child: Transform.translate(
-          offset: const Offset(0, 20),
+          offset: Offset(0, offsetY),
           child: Transform.scale(
-            scale: 0.95,
+            scale: scale,
             child: SizedBox(
               width: constraints.maxWidth * 0.9,
               height: constraints.maxHeight * 0.95,
-              child: Opacity(
-                opacity: 0.6,
-                child: ProfileCard(profile: profile),
-              ),
+              child: IgnorePointer(child: ProfileCard(profile: profile)),
             ),
           ),
         ),
@@ -565,21 +575,44 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildNavItem(Icons.explore, true),
-            _buildNavItem(Icons.grid_view, false),
-            _buildNavItem(Icons.chat_bubble, false),
-            _buildNavItem(Icons.person, false),
+            _buildNavItem(Icons.explore, true, null, context),
+            _buildNavItem(Icons.favorite, false, '/likes', context),
+            _buildNavItem(Icons.chat_bubble, false, '/messages', context),
+            _buildNavItem(Icons.person, false, null, context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, bool isActive) {
-    return Icon(
-      icon,
-      color: isActive ? AppColors.primary : Colors.grey.shade400,
-      size: 32,
+  Widget _buildNavItem(
+    IconData icon,
+    bool isActive,
+    String? route,
+    BuildContext context,
+  ) {
+    return GestureDetector(
+      onTap: route != null ? () => context.go(route) : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? AppColors.primary : Colors.grey.shade400,
+            size: 32,
+          ),
+          if (isActive)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              width: 4,
+              height: 4,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

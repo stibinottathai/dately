@@ -1,13 +1,14 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
-import 'package:dately/features/messages/data/dummy_messages.dart';
 import 'package:dately/features/messages/domain/conversation.dart';
-import 'package:dately/features/messages/domain/message.dart';
+
 import 'package:dately/features/messages/presentation/widgets/message_bubble.dart';
+import 'package:dately/features/messages/providers/chat_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
   final dynamic conversationData;
 
@@ -18,16 +19,15 @@ class ChatScreen extends StatefulWidget {
   });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late Profile otherUser;
-  late List<Message> messages;
   bool isOnline = false;
-  String lastActiveText = 'Active 5m ago';
+  String lastActiveText = 'Active now';
 
   @override
   void initState() {
@@ -42,24 +42,24 @@ class _ChatScreenState extends State<ChatScreen> {
       otherUser = conversation.otherUser;
       isOnline = conversation.isOnline;
       lastActiveText = conversation.lastActiveText;
-      // For now, use Sarah's messages as default
-      messages = List.from(sarahMessages);
     } else if (widget.conversationData is Profile) {
-      // New match scenario
+      // New match scenario (passed Profile directly)
       otherUser = widget.conversationData as Profile;
-      isOnline = true;
-      lastActiveText = 'Active now';
-      messages = [];
+      isOnline = true; // Assuming active if just matched
     } else {
-      // Fallback to finding conversation by ID
-      final conversation = dummyConversations.firstWhere(
-        (c) => c.id == widget.conversationId,
-        orElse: () => dummyConversations.first,
+      // Fallback or loading state if data missing?
+      // For now assume passed correctly.
+      // Ideally we fetch profile if missing.
+      otherUser = Profile(
+        id: 'unknown',
+        name: 'User',
+        age: 25,
+        bio: '',
+        location: '',
+        distanceMiles: 0,
+        imageUrls: [],
+        interests: [],
       );
-      otherUser = conversation.otherUser;
-      isOnline = conversation.isOnline;
-      lastActiveText = conversation.lastActiveText;
-      messages = List.from(sarahMessages);
     }
   }
 
@@ -71,30 +71,17 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
 
-    setState(() {
-      messages.add(
-        Message(
-          id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-          conversationId: widget.conversationId,
-          senderId: 'me',
-          receiverId: otherUser.id,
-          content: _messageController.text.trim(),
-          timestamp: DateTime.now(),
-          status: MessageStatus.sent,
-          isSentByMe: true,
-        ),
-      );
-    });
-
+    ref.read(chatProvider(widget.conversationId).notifier).sendMessage(text);
     _messageController.clear();
 
     // Scroll to bottom
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0, // Reverse list, so 0 is bottom
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -104,6 +91,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(chatProvider(widget.conversationId));
+    final messages = chatState.messages;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -113,17 +103,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // Messages Area
           Expanded(
-            child: messages.isEmpty
+            child: chatState.isLoading && messages.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : messages.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     controller: _scrollController,
+                    reverse:
+                        true, // Show newest at bottom (which is top of list in reverse)
                     padding: const EdgeInsets.all(16),
                     itemCount: messages.length + 1, // +1 for date separator
                     itemBuilder: (context, index) {
-                      if (index == 0) {
+                      if (index == messages.length) {
+                        // Date separator at end of list (top physically)
                         return _buildDateSeparator();
                       }
-                      final message = messages[index - 1];
+                      final message = messages[index];
                       return MessageBubble(
                         message: message,
                         senderAvatarUrl: message.isSentByMe

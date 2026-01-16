@@ -1,64 +1,33 @@
-import 'package:dately/app/theme/app_colors.dart';
-import 'package:dately/features/likes/data/dummy_likes.dart';
+import 'package:dately/features/discovery/presentation/widgets/match_dialog.dart';
 import 'package:dately/features/likes/domain/like.dart';
 import 'package:dately/features/likes/presentation/widgets/like_card_widget.dart';
+import 'package:dately/features/likes/providers/likes_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dately/app/theme/app_colors.dart';
 
-class LikesScreen extends StatefulWidget {
+class LikesScreen extends ConsumerStatefulWidget {
   final bool showBottomNav;
 
   const LikesScreen({super.key, this.showBottomNav = true});
 
   @override
-  State<LikesScreen> createState() => _LikesScreenState();
+  ConsumerState<LikesScreen> createState() => _LikesScreenState();
 }
 
-class _LikesScreenState extends State<LikesScreen> {
+class _LikesScreenState extends ConsumerState<LikesScreen> {
   int _selectedTabIndex = 0;
-  late List<Like> _receivedLikes;
-  late List<Like> _sentLikes;
-
-  @override
-  void initState() {
-    super.initState();
-    _receivedLikes = dummyLikes
-        .where((like) => like.direction == LikeDirection.received)
-        .toList();
-    _sentLikes = dummyLikes
-        .where((like) => like.direction == LikeDirection.sent)
-        .toList();
-  }
-
-  List<Like> get _currentLikes =>
-      _selectedTabIndex == 0 ? _receivedLikes : _sentLikes;
-
-  void _handleLikeAction(Like like) {
-    setState(() {
-      if (like.direction == LikeDirection.received) {
-        _receivedLikes.remove(like);
-        // TODO: Implement match logic
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Matched with ${like.profile.name}! 💕'),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } else {
-        _sentLikes.remove(like);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Retracted like for ${like.profile.name}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
+    final likesState = ref.watch(likesProvider);
+
+    // Filter based on tab
+    final currentLikes = _selectedTabIndex == 0
+        ? likesState.receivedLikes
+        : likesState.sentLikes;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: Column(
@@ -71,15 +40,17 @@ class _LikesScreenState extends State<LikesScreen> {
 
           // Content Area
           Expanded(
-            child: _currentLikes.isEmpty
+            child: likesState.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : currentLikes.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.only(top: 8, bottom: 80),
-                    itemCount: _currentLikes.length,
+                    itemCount: currentLikes.length,
                     itemBuilder: (context, index) {
                       return LikeCardWidget(
-                        like: _currentLikes[index],
-                        onAction: () => _handleLikeAction(_currentLikes[index]),
+                        like: currentLikes[index],
+                        onAction: () => _handleLikeAction(currentLikes[index]),
                       );
                     },
                   ),
@@ -89,6 +60,34 @@ class _LikesScreenState extends State<LikesScreen> {
       // Bottom Navigation
       bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
     );
+  }
+
+  Future<void> _handleLikeAction(Like like) async {
+    if (like.direction == LikeDirection.received) {
+      // Accepting a received like -> Automatic Match
+      final matchId = await ref
+          .read(likesProvider.notifier)
+          .likeUser(like.profile.id);
+      if (matchId != null && mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              MatchDialog(matchedProfile: like.profile, matchId: matchId),
+        );
+      }
+    } else {
+      // Retract like
+      await ref.read(likesProvider.notifier).unlikeUser(like.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Retracted like for ${like.profile.name}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildTopAppBar() {

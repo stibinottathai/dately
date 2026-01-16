@@ -3,7 +3,9 @@ import 'package:dately/features/discovery/providers/filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final discoveryProvider = FutureProvider<List<Profile>>((ref) async {
+final discoveryProvider = FutureProvider.autoDispose<List<Profile>>((
+  ref,
+) async {
   final filters = ref.watch(filterProvider);
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];

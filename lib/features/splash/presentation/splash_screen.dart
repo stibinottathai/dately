@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -51,11 +53,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _controller.forward();
 
     // Navigate to next screen after delay
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go('/onboarding');
-      }
-    });
+    _checkNavigation();
+  }
+
+  Future<void> _checkNavigation() async {
+    // Wait minimum 2 seconds for animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final seenOnboarding = prefs.getBool('seenOnboarding') ?? false;
+
+    if (!mounted) return;
+
+    if (!seenOnboarding) {
+      context.go('/onboarding');
+      return;
+    }
+
+    // Check Auth
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      context.go('/counter');
+    } else {
+      context.go('/sign-in');
+    }
   }
 
   @override

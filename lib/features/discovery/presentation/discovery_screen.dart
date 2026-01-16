@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dately/features/discovery/presentation/widgets/match_dialog.dart';
 import 'package:dately/features/discovery/providers/discovery_provider.dart';
+import 'package:dately/features/likes/providers/likes_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DiscoveryScreen extends ConsumerStatefulWidget {
@@ -147,9 +149,27 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     final threshold = screenWidth * 0.3; // Swipe threshold
 
     if (_dragPosition.dx.abs() > threshold) {
-      _animateCardOut(_dragPosition.dx > 0);
+      final isRight = _dragPosition.dx > 0;
+      _animateCardOut(isRight);
+
+      if (isRight) {
+        final profile = _profiles.first;
+        _handleLike(profile);
+      }
     } else {
       _resetPosition();
+    }
+  }
+
+  Future<void> _handleLike(Profile profile) async {
+    final matchId = await ref.read(likesProvider.notifier).likeUser(profile.id);
+    if (matchId != null && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            MatchDialog(matchedProfile: profile, matchId: matchId),
+      );
     }
   }
 
@@ -187,6 +207,12 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
 
   void _swipeProgrammatically(bool isRight) {
     if (_isAnimatingOut || _profiles.isEmpty) return;
+
+    if (isRight) {
+      final profile = _profiles.first;
+      _handleLike(profile);
+    }
+
     _isAnimatingOut = true;
     final screenWidth = MediaQuery.of(context).size.width;
     final endX = isRight ? screenWidth * 1.5 : -screenWidth * 1.5;
@@ -207,8 +233,12 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     _loveButtonController.forward().then((_) {
       _loveButtonController.reverse();
     });
-    // Then swipe right
-    _swipeProgrammatically(true);
+
+    // Like the user
+    if (_profiles.isNotEmpty) {
+      // Just swipe programmatically, it handles the like
+      _swipeProgrammatically(true);
+    }
   }
 
   void _onFilterPressed() {

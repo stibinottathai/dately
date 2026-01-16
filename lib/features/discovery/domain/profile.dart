@@ -39,6 +39,40 @@ class Profile extends Equatable {
     this.gender = 'Everyone',
   });
 
+  factory Profile.fromMap(Map<String, dynamic> map) {
+    // Calculate Age from DOB
+    final dobStr = map['date_of_birth'] as String?;
+    int age = 24; // Default if null
+    if (dobStr != null) {
+      final dob = DateTime.parse(dobStr);
+      final now = DateTime.now();
+      age = now.year - dob.year;
+      if (now.month < dob.month ||
+          (now.month == dob.month && now.day < dob.day)) {
+        age--;
+      }
+    }
+
+    return Profile(
+      id: map['id'],
+      name: map['first_name'] ?? 'User',
+      age: age,
+      bio: map['bio'] ?? '',
+      location: 'Nearby', // Future: Calculate real distance
+      distanceMiles: 5,
+      imageUrls: List<String>.from(map['photos'] ?? []),
+      interests: List<String>.from(map['interests'] ?? []),
+      isVerified: false, // Future: Add verified status to DB
+      occupation: map['occupation'],
+      education: map['education'],
+      petPreference: map['pet_preference'],
+      drinkingHabit: map['drinking_habit'],
+      religion: map['religion'],
+      height: map['height'],
+      gender: map['gender'] ?? 'Other',
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,

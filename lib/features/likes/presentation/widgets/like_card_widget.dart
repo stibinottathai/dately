@@ -34,7 +34,9 @@ class LikeCardWidget extends StatelessWidget {
         children: [
           // Profile Photo
           _buildProfilePhoto(
-            profile.imageUrls.isNotEmpty ? profile.imageUrls[0] : '',
+            profile.imageUrls.isNotEmpty
+                ? profile.imageUrls[0]
+                : AppColors.getDefaultAvatarUrl(profile.name),
           ),
           const SizedBox(width: 16),
 
@@ -96,20 +98,17 @@ class LikeCardWidget extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.2),
               width: 2,
             ),
-            image: imageUrl.isNotEmpty
-                ? DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                    colorFilter: like.direction == LikeDirection.sent
-                        ? ColorFilter.mode(
-                            Colors.grey.withOpacity(0.3),
-                            BlendMode.saturation,
-                          )
-                        : null,
-                  )
-                : null,
+            image: DecorationImage(
+              image: NetworkImage(imageUrl),
+              fit: BoxFit.cover,
+              colorFilter: like.direction == LikeDirection.sent
+                  ? ColorFilter.mode(
+                      Colors.grey.withOpacity(0.3),
+                      BlendMode.saturation,
+                    )
+                  : null,
+            ),
           ),
-          child: imageUrl.isEmpty ? const Icon(Icons.person, size: 32) : null,
         ),
         // Super Like Badge
         if (like.type == LikeType.superLike &&
@@ -132,6 +131,26 @@ class LikeCardWidget extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context, bool isSent) {
+    if (isSent && like.isMatched) {
+      return ElevatedButton(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          disabledBackgroundColor: Colors.grey.shade100,
+          disabledForegroundColor: Colors.grey.shade400,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          minimumSize: const Size(84, 36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: const Text(
+          'Matched',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+      );
+    }
+
     return ElevatedButton(
       onPressed: onAction,
       style: ElevatedButton.styleFrom(

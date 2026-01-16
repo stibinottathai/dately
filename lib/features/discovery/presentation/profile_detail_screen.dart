@@ -1,3 +1,4 @@
+import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
 
@@ -76,7 +77,10 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                   setState(() => _currentPhotoIndex = index),
               itemBuilder: (context, index) {
                 if (widget.profile.imageUrls.isEmpty) {
-                  return Container(color: Colors.grey.shade900);
+                  return Image.network(
+                    AppColors.getDefaultAvatarUrl(widget.profile.name),
+                    fit: BoxFit.cover,
+                  );
                 }
                 return Image.network(
                   widget.profile.imageUrls[index],

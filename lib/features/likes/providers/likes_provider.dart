@@ -31,6 +31,7 @@ class LikesState {
 class LikesNotifier extends StateNotifier<LikesState> {
   LikesNotifier() : super(LikesState()) {
     _fetchLikes();
+    _subscribeToRealtime();
   }
 
   Future<void> _fetchLikes() async {
@@ -43,6 +44,17 @@ class LikesNotifier extends StateNotifier<LikesState> {
 
     try {
       // Fetch Sent Likes first to filter efficiently
+      // Fetch Matches to exclude/mark as matched
+      final matchesResponse = await Supabase.instance.client
+          .from('matches')
+          .select('user1_id, user2_id')
+          .or('user1_id.eq.$userId,user2_id.eq.$userId');
+
+      final matchedUserIds = (matchesResponse as List).map((m) {
+        return m['user1_id'] == userId ? m['user2_id'] : m['user1_id'];
+      }).toSet();
+
+      // Fetch Sent Likes
       final sentResponse = await Supabase.instance.client
           .from('likes')
           .select('*, profiles!to_user_id(*)')
@@ -57,18 +69,9 @@ class LikesNotifier extends StateNotifier<LikesState> {
           type: LikeType.regular,
           direction: LikeDirection.sent,
           timestamp: DateTime.parse(data['created_at']),
+          isMatched: matchedUserIds.contains(profile.id),
         );
       }).toList();
-
-      // Fetch Matches to exclude already matched users
-      final matchesResponse = await Supabase.instance.client
-          .from('matches')
-          .select('user1_id, user2_id')
-          .or('user1_id.eq.$userId,user2_id.eq.$userId');
-
-      final matchedUserIds = (matchesResponse as List).map((m) {
-        return m['user1_id'] == userId ? m['user2_id'] : m['user1_id'];
-      }).toSet();
 
       final sentUserIds = sentLikes.map((l) => l.profile.id).toSet();
       final excludedIds = {...sentUserIds, ...matchedUserIds};
@@ -105,6 +108,8 @@ class LikesNotifier extends StateNotifier<LikesState> {
       print('Error fetching likes: $e');
     }
   }
+
+  Future<void> refreshLikes() => _fetchLikes();
 
   Future<String?> likeUser(String targetUserId) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
@@ -172,6 +177,48 @@ class LikesNotifier extends StateNotifier<LikesState> {
     } catch (e) {
       print('Error unliking user: $e');
     }
+  }
+
+  RealtimeChannel? _subscription;
+
+  void _subscribeToRealtime() {
+    _subscription = Supabase.instance.client.channel(
+      'public:likes_matches_updates',
+    );
+
+    _subscription!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'likes',
+          callback: (payload) {
+            final toUserId = payload.newRecord['to_user_id'];
+            final myId = Supabase.instance.client.auth.currentUser?.id;
+            if (toUserId == myId) {
+              _fetchLikes();
+            }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'matches',
+          callback: (payload) {
+            final u1 = payload.newRecord['user1_id'];
+            final u2 = payload.newRecord['user2_id'];
+            final myId = Supabase.instance.client.auth.currentUser?.id;
+            if (u1 == myId || u2 == myId) {
+              _fetchLikes();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.unsubscribe();
+    super.dispose();
   }
 }
 

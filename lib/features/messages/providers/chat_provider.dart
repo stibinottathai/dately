@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dately/features/messages/domain/message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -75,9 +76,69 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .delete()
+          .eq('id', messageId);
+
+      state = ChatState(
+        messages: state.messages.where((m) => m.id != messageId).toList(),
+        isLoading: state.isLoading,
+      );
+    } catch (e) {
+      print('Error deleting message: $e');
+    }
+  }
+
+  Future<void> clearChat() async {
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .delete()
+          .eq('match_id', matchId);
+
+      state = ChatState(messages: [], isLoading: state.isLoading);
+    } catch (e) {
+      print('Error clearing chat: $e');
+    }
+  }
+
+  Future<void> sendImageMessage(String imagePath) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$userId.jpg';
+      final file = File(imagePath);
+
+      // Upload to Supabase Storage
+      await Supabase.instance.client.storage
+          .from('chat_images')
+          .upload(fileName, file);
+
+      final imageUrl = Supabase.instance.client.storage
+          .from('chat_images')
+          .getPublicUrl(fileName);
+
+      await Supabase.instance.client.from('messages').insert({
+        'match_id': matchId,
+        'sender_id': userId,
+        'content': imageUrl,
+        'message_type': 'image',
+      });
+    } catch (e) {
+      print('Error sending image: $e');
+    }
+  }
+
   Message _mapMessage(Map<String, dynamic> data) {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final senderId = data['sender_id'];
+    final typeStr = data['message_type'] as String? ?? 'text';
+    final type = typeStr == 'image' ? MessageType.image : MessageType.text;
+
     return Message(
       id: data['id'],
       conversationId: data['match_id'],
@@ -88,6 +149,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       timestamp: DateTime.parse(data['created_at']),
       status: data['read_at'] != null ? MessageStatus.read : MessageStatus.sent,
       isSentByMe: senderId == userId,
+      type: type,
     );
   }
 

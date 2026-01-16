@@ -4,8 +4,9 @@ import 'package:dately/features/likes/presentation/widgets/like_card_widget.dart
 import 'package:dately/features/likes/providers/likes_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/app/widgets/app_bottom_nav.dart';
 
 class LikesScreen extends ConsumerStatefulWidget {
   final bool showBottomNav;
@@ -40,25 +41,34 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
 
           // Content Area
           Expanded(
-            child: likesState.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : currentLikes.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.only(top: 8, bottom: 80),
-                    itemCount: currentLikes.length,
-                    itemBuilder: (context, index) {
-                      return LikeCardWidget(
-                        like: currentLikes[index],
-                        onAction: () => _handleLikeAction(currentLikes[index]),
-                      );
-                    },
-                  ),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(likesProvider.notifier).refreshLikes();
+              },
+              child: likesState.isLoading && currentLikes.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : currentLikes.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 8, bottom: 80),
+                      itemCount: currentLikes.length,
+                      itemBuilder: (context, index) {
+                        return LikeCardWidget(
+                          like: currentLikes[index],
+                          onAction: () =>
+                              _handleLikeAction(currentLikes[index]),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
       // Bottom Navigation
-      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
+      bottomNavigationBar: widget.showBottomNav
+          ? const AppBottomNav(currentTab: AppTab.likes)
+          : null,
     );
   }
 
@@ -200,85 +210,43 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _selectedTabIndex == 0 ? Icons.favorite_border : Icons.send,
-            size: 64,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _selectedTabIndex == 0 ? 'No likes yet' : 'No sent likes',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _selectedTabIndex == 0
-                ? 'Keep swiping to find your match!'
-                : 'Start liking profiles to see them here',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(Icons.explore, false, '/counter', context),
-            _buildNavItem(Icons.favorite, true, null, context),
-            _buildNavItem(Icons.chat_bubble, false, '/messages', context),
-            _buildNavItem(Icons.person, false, null, context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    bool isActive,
-    String? route,
-    BuildContext context,
-  ) {
-    return GestureDetector(
-      onTap: route != null ? () => context.go(route) : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppColors.primary : Colors.grey.shade400,
-            size: 32,
-          ),
-          if (isActive)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              width: 4,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _selectedTabIndex == 0 ? Icons.favorite_border : Icons.send,
+                    size: 64,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _selectedTabIndex == 0 ? 'No likes yet' : 'No sent likes',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _selectedTabIndex == 0
+                        ? 'Keep swiping to find your match!'
+                        : 'Start liking profiles to see them here',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  ),
+                ],
               ),
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 
 enum MessageStatus { sent, delivered, read }
 
+enum MessageType { text, image }
+
 class Message extends Equatable {
   final String id;
   final String conversationId;
@@ -11,6 +13,7 @@ class Message extends Equatable {
   final DateTime timestamp;
   final MessageStatus status;
   final bool isSentByMe;
+  final MessageType type;
 
   const Message({
     required this.id,
@@ -21,6 +24,7 @@ class Message extends Equatable {
     required this.timestamp,
     required this.status,
     this.isSentByMe = false,
+    this.type = MessageType.text,
   });
 
   @override
@@ -33,5 +37,6 @@ class Message extends Equatable {
     timestamp,
     status,
     isSentByMe,
+    type,
   ];
 }

@@ -1,4 +1,5 @@
 import 'package:dately/app/theme/app_colors.dart';
+
 import 'package:dately/features/profile/domain/user_profile.dart';
 import 'package:dately/features/profile/providers/profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -145,38 +146,94 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Photo Configured as PageView
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: PageView.builder(
-                itemCount: profile.photos.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPhotoIndex = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(profile.photos[index]),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: const BoxDecoration(
+              child: profile.photos.isEmpty
+                  ? Container(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                           colors: [
-                            Colors.transparent,
-                            Colors.transparent,
-                            Colors.black54,
+                            AppColors.primary.withOpacity(0.1),
+                            AppColors.secondary.withOpacity(0.05),
+                            Colors.white,
                           ],
-                          stops: [0.0, 0.4, 1.0],
                         ),
                       ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 80,
+                                backgroundColor: Colors.grey.shade50,
+                                backgroundImage: NetworkImage(
+                                  AppColors.getDefaultAvatarUrl(profile.name),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.transparent,
+                                  Colors.black26,
+                                ],
+                                stops: [0.0, 0.4, 1.0],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : PageView.builder(
+                      itemCount: profile.photos.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPhotoIndex = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: NetworkImage(profile.photos[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.transparent,
+                                  Colors.black54,
+                                ],
+                                stops: [0.0, 0.4, 1.0],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
 
             // Indicators
@@ -253,53 +310,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
 
-            // Photo Counter
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${_currentPhotoIndex + 1} / ${profile.photos.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            // Photo Counter (Only if photos exist)
+            if (profile.photos.isNotEmpty)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                ),
-              ),
-            ),
-
-            // Pagination Dots
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  profile.photos.length,
-                  (index) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: index == _currentPhotoIndex ? 24 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: index == _currentPhotoIndex
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_currentPhotoIndex + 1} / ${profile.photos.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-            ),
+
+            // Pagination Dots (Only if photos exist)
+            if (profile.photos.isNotEmpty)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    profile.photos.length,
+                    (index) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: index == _currentPhotoIndex ? 24 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: index == _currentPhotoIndex
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

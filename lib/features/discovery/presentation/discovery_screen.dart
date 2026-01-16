@@ -1,4 +1,5 @@
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/app/widgets/app_bottom_nav.dart';
 
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:dately/features/discovery/presentation/advanced_filters_screen.dart';
@@ -6,7 +7,6 @@ import 'package:dately/features/discovery/presentation/profile_detail_screen.dar
 import 'package:dately/features/discovery/presentation/widgets/profile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:dately/features/discovery/presentation/widgets/match_dialog.dart';
 import 'package:dately/features/discovery/providers/discovery_provider.dart';
@@ -344,7 +344,9 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
             ),
 
           // Bottom Navigation
-          if (widget.showBottomNav) _buildBottomNav(),
+          // Bottom Navigation
+          if (widget.showBottomNav)
+            const AppBottomNav(currentTab: AppTab.explore),
         ],
       ),
     );
@@ -697,57 +699,5 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     }
 
     return GestureDetector(onTap: onTap, child: button);
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(Icons.explore, true, null, context),
-            _buildNavItem(Icons.favorite, false, '/likes', context),
-            _buildNavItem(Icons.chat_bubble, false, '/messages', context),
-            _buildNavItem(Icons.person, false, null, context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    bool isActive,
-    String? route,
-    BuildContext context,
-  ) {
-    return GestureDetector(
-      onTap: route != null ? () => context.go(route) : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppColors.primary : Colors.grey.shade400,
-            size: 32,
-          ),
-          if (isActive)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              width: 4,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-        ],
-      ),
-    );
   }
 }

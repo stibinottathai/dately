@@ -49,6 +49,9 @@ GoRouter router(Ref ref) {
         builder: (context, state) => const SignUpStep4Screen(),
       ),
       GoRoute(path: '/counter', redirect: (context, state) => '/main/0'),
+      GoRoute(path: '/likes', redirect: (context, state) => '/main/1'),
+      GoRoute(path: '/messages', redirect: (context, state) => '/main/2'),
+      GoRoute(path: '/profile', redirect: (context, state) => '/main/3'),
       GoRoute(
         path: '/main/:index',
         builder: (context, state) {

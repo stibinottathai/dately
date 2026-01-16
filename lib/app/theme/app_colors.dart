@@ -19,4 +19,8 @@ class AppColors {
     end: Alignment.bottomCenter,
     colors: [primary, secondary],
   );
+
+  static String getDefaultAvatarUrl(String name) {
+    return 'https://api.dicebear.com/9.x/adventurer/png?seed=${Uri.encodeComponent(name)}&backgroundColor=b6e3f4,c0aede,d1d4f9';
+  }
 }

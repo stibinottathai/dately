@@ -1,9 +1,11 @@
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:dately/features/messages/domain/conversation.dart';
 
 import 'package:dately/features/messages/presentation/widgets/message_bubble.dart';
 import 'package:dately/features/messages/providers/chat_provider.dart';
+import 'package:dately/features/messages/providers/matches_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,6 +35,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _initializeChat();
+    // Mark as read
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(matchesProvider.notifier).markAsRead(widget.conversationId);
+    });
   }
 
   void _initializeChat() {
@@ -68,6 +74,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      ref
+          .read(chatProvider(widget.conversationId).notifier)
+          .sendImageMessage(image.path);
+    }
   }
 
   void _sendMessage() {
@@ -119,13 +135,102 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         return _buildDateSeparator();
                       }
                       final message = messages[index];
-                      return MessageBubble(
-                        message: message,
-                        senderAvatarUrl: message.isSentByMe
-                            ? null
-                            : (otherUser.imageUrls.isNotEmpty
-                                  ? otherUser.imageUrls[0]
-                                  : null),
+                      return GestureDetector(
+                        onLongPress: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.delete_outline, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Delete Message',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: const Text(
+                                'Are you sure you want to delete this message? This action cannot be undone.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              actionsPadding: const EdgeInsets.fromLTRB(
+                                24,
+                                0,
+                                24,
+                                24,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => context.pop(false),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey.shade600,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => context.pop(true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade50,
+                                    foregroundColor: Colors.red,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            ref
+                                .read(
+                                  chatProvider(widget.conversationId).notifier,
+                                )
+                                .deleteMessage(message.id);
+                          }
+                        },
+                        child: MessageBubble(
+                          message: message,
+                          senderAvatarUrl: message.isSentByMe
+                              ? null
+                              : (otherUser.imageUrls.isNotEmpty
+                                    ? otherUser.imageUrls[0]
+                                    : AppColors.getDefaultAvatarUrl(
+                                        otherUser.name,
+                                      )),
+                        ),
                       );
                     },
                   ),
@@ -146,10 +251,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         right: 16,
         bottom: 16,
       ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
-        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.1))),
-      ),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Row(
         children: [
           // Back Button
@@ -176,16 +278,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.grey.shade300, width: 2),
-                  image: otherUser.imageUrls.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(otherUser.imageUrls[0]),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      otherUser.imageUrls.isNotEmpty
+                          ? otherUser.imageUrls[0]
+                          : AppColors.getDefaultAvatarUrl(otherUser.name),
+                    ),
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                child: otherUser.imageUrls.isEmpty
-                    ? const Icon(Icons.person)
-                    : null,
               ),
               if (isOnline)
                 Positioned(
@@ -228,7 +329,102 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
           // Action Buttons
           IconButton(icon: const Icon(Icons.call), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'clear_chat') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.delete_sweep_outlined, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text(
+                          'Clear Chat',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                    content: const Text(
+                      'This will delete all messages in this conversation. This cannot be undone.',
+                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                    ),
+                    actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    actions: [
+                      TextButton(
+                        onPressed: () => context.pop(false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => context.pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade50,
+                          foregroundColor: Colors.red,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Delete All',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  ref
+                      .read(chatProvider(widget.conversationId).notifier)
+                      .clearChat();
+                }
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'clear_chat',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_sweep, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Clear Chat', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.more_vert),
+            ),
+          ),
         ],
       ),
     );
@@ -266,16 +462,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              image: otherUser.imageUrls.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(otherUser.imageUrls[0]),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+              image: DecorationImage(
+                image: NetworkImage(
+                  otherUser.imageUrls.isNotEmpty
+                      ? otherUser.imageUrls[0]
+                      : AppColors.getDefaultAvatarUrl(otherUser.name),
+                ),
+                fit: BoxFit.cover,
+              ),
             ),
-            child: otherUser.imageUrls.isEmpty
-                ? const Icon(Icons.person, size: 40)
-                : null,
           ),
           const SizedBox(height: 16),
           Text(
@@ -295,10 +490,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildInputArea(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
-      ),
+      decoration: const BoxDecoration(color: Colors.white),
       child: SafeArea(
         child: Row(
           children: [
@@ -313,7 +505,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: IconButton(
                 icon: const Icon(Icons.add),
                 iconSize: 24,
-                onPressed: () {},
+                onPressed: _pickImage,
                 padding: EdgeInsets.zero,
               ),
             ),

@@ -48,10 +48,12 @@ class MessageBubble extends StatelessWidget {
                   : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  padding: message.type == MessageType.image
+                      ? const EdgeInsets.all(4)
+                      : const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                   decoration: BoxDecoration(
                     gradient: isSent
                         ? const LinearGradient(
@@ -81,14 +83,55 @@ class MessageBubble extends StatelessWidget {
                           ]
                         : null,
                   ),
-                  child: Text(
-                    message.content,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isSent ? Colors.white : Colors.black87,
-                      height: 1.4,
-                    ),
-                  ),
+                  child: message.type == MessageType.image
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            message.content,
+                            width: 200,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const SizedBox(
+                                width: 200,
+                                height: 200,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return SizedBox(
+                                width: 200,
+                                height: 200,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                  .cumulativeBytesLoaded /
+                                              loadingProgress
+                                                  .expectedTotalBytes!
+                                        : null,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Text(
+                          message.content,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isSent ? Colors.white : Colors.black87,
+                            height: 1.4,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 4),
                 Padding(

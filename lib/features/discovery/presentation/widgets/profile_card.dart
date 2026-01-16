@@ -1,3 +1,4 @@
+import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
 
@@ -14,12 +15,14 @@ class ProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(
           32,
         ), // User requested reduce radius slightly? kept 32 as balanced
-        image: profile.imageUrls.isNotEmpty
-            ? DecorationImage(
-                image: NetworkImage(profile.imageUrls.first),
-                fit: BoxFit.cover,
-              )
-            : null,
+        image: DecorationImage(
+          image: NetworkImage(
+            profile.imageUrls.isNotEmpty
+                ? profile.imageUrls.first
+                : AppColors.getDefaultAvatarUrl(profile.name),
+          ),
+          fit: BoxFit.cover,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),

@@ -1,4 +1,5 @@
-import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/app/widgets/app_bottom_nav.dart';
+
 import 'package:dately/features/messages/presentation/widgets/conversation_card.dart';
 import 'package:dately/features/messages/presentation/widgets/new_match_avatar.dart';
 import 'package:dately/features/messages/providers/matches_provider.dart';
@@ -82,6 +83,7 @@ class MessagesScreen extends ConsumerWidget {
                                             matchesState.matches[index];
                                         return NewMatchAvatar(
                                           profile: match.otherUser,
+                                          isNew: match.isNewMatch,
                                           onTap: () {
                                             context.push(
                                               '/chat/${match.id}',
@@ -149,7 +151,10 @@ class MessagesScreen extends ConsumerWidget {
             ),
 
       // Bottom Navigation
-      bottomNavigationBar: showBottomNav ? _buildBottomNav(context) : null,
+      // Bottom Navigation
+      bottomNavigationBar: showBottomNav
+          ? const AppBottomNav(currentTab: AppTab.messages)
+          : null,
     );
   }
 
@@ -197,59 +202,6 @@ class MessagesScreen extends ConsumerWidget {
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(Icons.explore, false, '/counter', context),
-            _buildNavItem(Icons.search, false, null, context),
-            _buildNavItem(Icons.chat_bubble, true, null, context),
-            _buildNavItem(Icons.favorite, false, '/likes', context),
-            _buildNavItem(Icons.person, false, null, context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    bool isActive,
-    String? route,
-    BuildContext context,
-  ) {
-    return GestureDetector(
-      onTap: route != null ? () => context.go(route) : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppColors.primary : Colors.grey.shade400,
-            size: 32,
-          ),
-          if (isActive)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
         ],
       ),
     );

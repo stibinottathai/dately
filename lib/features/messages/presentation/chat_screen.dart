@@ -272,19 +272,59 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Profile Photo with Online Indicator
           Stack(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 2),
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      otherUser.imageUrls.isNotEmpty
-                          ? otherUser.imageUrls[0]
-                          : AppColors.getDefaultAvatarUrl(otherUser.name),
+              GestureDetector(
+                onTap: () {
+                  if (otherUser.imageUrls.isNotEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        insetPadding: EdgeInsets.zero,
+                        child: Stack(
+                          alignment: Alignment.topRight,
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              height: double.infinity,
+                              child: InteractiveViewer(
+                                child: Image.network(
+                                  otherUser.imageUrls[0],
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 40,
+                              right: 20,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                    image: DecorationImage(
+                      image: NetworkImage(
+                        otherUser.imageUrls.isNotEmpty
+                            ? otherUser.imageUrls[0]
+                            : AppColors.getDefaultAvatarUrl(otherUser.name),
+                      ),
+                      fit: BoxFit.cover,
                     ),
-                    fit: BoxFit.cover,
                   ),
                 ),
               ),

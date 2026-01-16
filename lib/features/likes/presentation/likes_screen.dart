@@ -110,15 +110,9 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
       ),
       decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           // Profile Icon
-          Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.centerLeft,
-            child: const Icon(Icons.person, size: 28),
-          ),
 
           // Title
           Text(
@@ -130,17 +124,6 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
           ),
 
           // Filter Button
-          Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              icon: const Icon(Icons.tune),
-              onPressed: () {
-                // TODO: Implement filter functionality
-              },
-            ),
-          ),
         ],
       ),
     );

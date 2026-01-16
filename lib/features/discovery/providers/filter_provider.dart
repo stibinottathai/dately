@@ -44,7 +44,9 @@ class FilterNotifier extends StateNotifier<FilterState> {
           .from('profiles')
           .select('discovery_preferences')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (response == null) return;
 
       final prefs = response['discovery_preferences'];
       if (prefs != null) {

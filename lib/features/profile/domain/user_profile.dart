@@ -49,6 +49,53 @@ class UserProfile extends Equatable {
     this.artistsList,
   });
 
+  factory UserProfile.fromMap(Map<String, dynamic> map) {
+    // Calculate age from date_of_birth
+    int age = 18;
+    if (map['date_of_birth'] != null) {
+      final dob = DateTime.parse(map['date_of_birth']);
+      final now = DateTime.now();
+      age = now.year - dob.year;
+      if (now.month < dob.month ||
+          (now.month == dob.month && now.day < dob.day)) {
+        age--;
+      }
+    }
+
+    // Parse photos safely
+    List<String> photos = [];
+    if (map['photos'] != null) {
+      photos = List<String>.from(map['photos']);
+    }
+
+    // Parse prompts
+    String? prompt1;
+    String? prompt2;
+    if (map['prompts'] != null) {
+      final prompts = map['prompts'] as Map<String, dynamic>;
+      prompt1 = prompts['prompt_1'] as String?;
+      prompt2 = prompts['prompt_2'] as String?;
+    }
+
+    return UserProfile(
+      id: map['id'] ?? '',
+      name: map['first_name'] ?? 'User',
+      age: age,
+      bio: map['bio'] ?? '',
+      photos: photos,
+      // Map other fields that might be present or default them
+      spontaneousPrompt: prompt1,
+      idealSundayPrompt: prompt2,
+      mbtiType: map['mbti_type'] as String?,
+      occupation: map['occupation'] as String?,
+      height: map['height'] as String?,
+      education: map['education'] as String?,
+      religion: map['religion'] as String?,
+      petPreference: map['pet_preference'] as String?,
+      drinkingHabit: map['drinking_habit'] as String?,
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,

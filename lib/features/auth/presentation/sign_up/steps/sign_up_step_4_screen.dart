@@ -213,7 +213,7 @@ class SignUpStep4Screen extends ConsumerWidget {
                         ),
                       ),
                       const Text(
-                        'Express yourself! These are optional but help start conversations.',
+                        'Please answer at least one prompt to help others get to know you.',
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
@@ -271,6 +271,20 @@ class SignUpStep4Screen extends ConsumerWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
+                        if (state.prompt1.trim().isEmpty &&
+                            state.prompt2.trim().isEmpty &&
+                            state.prompt3.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please answer at least one prompt to complete your profile.',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
                         await notifier.submit();
                         if (context.mounted) {
                           context.go('/counter');

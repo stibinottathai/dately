@@ -1,11 +1,18 @@
+import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
 
 class NewMatchAvatar extends StatelessWidget {
   final Profile profile;
+  final bool isNew;
   final VoidCallback onTap;
 
-  const NewMatchAvatar({super.key, required this.profile, required this.onTap});
+  const NewMatchAvatar({
+    super.key,
+    required this.profile,
+    this.isNew = true,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +23,8 @@ class NewMatchAvatar extends StatelessWidget {
           // Gold ring container
           Container(
             padding: const EdgeInsets.all(2.5),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFB800),
+            decoration: BoxDecoration(
+              color: isNew ? const Color(0xFFFFB800) : Colors.grey.shade300,
               shape: BoxShape.circle,
             ),
             child: Container(
@@ -29,16 +36,15 @@ class NewMatchAvatar extends StatelessWidget {
                   color: Theme.of(context).colorScheme.surface,
                   width: 2,
                 ),
-                image: profile.imageUrls.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(profile.imageUrls[0]),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+                image: DecorationImage(
+                  image: NetworkImage(
+                    profile.imageUrls.isNotEmpty
+                        ? profile.imageUrls[0]
+                        : AppColors.getDefaultAvatarUrl(profile.name),
+                  ),
+                  fit: BoxFit.cover,
+                ),
               ),
-              child: profile.imageUrls.isEmpty
-                  ? const Icon(Icons.person, size: 36)
-                  : null,
             ),
           ),
           const SizedBox(height: 8),

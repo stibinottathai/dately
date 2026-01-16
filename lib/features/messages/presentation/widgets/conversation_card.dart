@@ -1,4 +1,5 @@
 import 'package:dately/features/messages/domain/conversation.dart';
+import 'package:dately/features/messages/domain/message.dart';
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -17,7 +18,11 @@ class ConversationCard extends StatelessWidget {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inMinutes < 60) {
+    if (difference.inSeconds < 20) {
+      return 'Now';
+    } else if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s ago';
+    } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
       return '${difference.inHours}h ago';
@@ -56,18 +61,17 @@ class ConversationCard extends StatelessWidget {
                   height: 64,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    image: conversation.otherUser.imageUrls.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(
-                              conversation.otherUser.imageUrls[0],
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                    image: DecorationImage(
+                      image: NetworkImage(
+                        conversation.otherUser.imageUrls.isNotEmpty
+                            ? conversation.otherUser.imageUrls[0]
+                            : AppColors.getDefaultAvatarUrl(
+                                conversation.otherUser.name,
+                              ),
+                      ),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  child: conversation.otherUser.imageUrls.isEmpty
-                      ? const Icon(Icons.person, size: 32)
-                      : null,
                 ),
                 if (conversation.isOnline)
                   Positioned(
@@ -105,7 +109,9 @@ class ConversationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    conversation.lastMessage?.content ?? 'New match!',
+                    conversation.lastMessage?.type == MessageType.image
+                        ? 'Sent an image 📷'
+                        : conversation.lastMessage?.content ?? 'New match!',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: conversation.hasUnread
@@ -132,6 +138,16 @@ class ConversationCard extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: isRecent ? FontWeight.bold : FontWeight.w500,
                   color: isRecent ? AppColors.primary : Colors.grey.shade500,
+                ),
+              ),
+            if (conversation.hasUnread)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
           ],

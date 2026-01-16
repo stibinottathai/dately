@@ -3,12 +3,158 @@ import 'package:dately/features/auth/presentation/sign_up/providers/sign_up_stat
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
 
-class SignUpStep2Screen extends ConsumerWidget {
+class SignUpStep2Screen extends ConsumerStatefulWidget {
   const SignUpStep2Screen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SignUpStep2Screen> createState() => _SignUpStep2ScreenState();
+}
+
+class _SignUpStep2ScreenState extends ConsumerState<SignUpStep2Screen> {
+  bool _isLoadingLocation = false;
+  String? _locationStatus;
+  Position? _currentPosition;
+  final TextEditingController _locationController = TextEditingController();
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _requestLocationPermission() async {
+    setState(() {
+      _isLoadingLocation = true;
+      _locationStatus = null;
+    });
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationStatus =
+              'Location services are disabled. Please enable them.';
+        });
+        _showLocationDialog(
+          'Location Services Disabled',
+          'Please enable location services in your device settings to continue.',
+        );
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isLoadingLocation = false;
+            _locationStatus = 'Location permission denied.';
+          });
+          _showLocationDialog(
+            'Permission Denied',
+            'Location permission is required to find matches nearby.',
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationStatus =
+              'Location permission permanently denied. Please enable in settings.';
+        });
+        _showLocationDialog(
+          'Permission Required',
+          'Please enable location permission in your device settings to continue.',
+          showSettings: true,
+        );
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _currentPosition = position;
+        _isLoadingLocation = false;
+        _locationStatus =
+            'Location obtained: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+        // Populate the manual location field (in production, use geocoding to get city name)
+        _locationController.text =
+            'Lat: ${position.latitude.toStringAsFixed(2)}, Long: ${position.longitude.toStringAsFixed(2)}';
+      });
+
+      // Show success and navigate
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Location obtained successfully! ✓',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingLocation = false;
+        _locationStatus = 'Error: ${e.toString()}';
+      });
+      _showLocationDialog(
+        'Error',
+        'Failed to get location. Please try again or enter manually.',
+      );
+    }
+  }
+
+  void _showLocationDialog(
+    String title,
+    String message, {
+    bool showSettings = false,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          if (showSettings)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Geolocator.openLocationSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(signUpNotifierProvider);
     final notifier = ref.read(signUpNotifierProvider.notifier);
 
@@ -86,11 +232,21 @@ class SignUpStep2Screen extends ConsumerWidget {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            const Icon(
-                              Icons.location_on,
+                            Icon(
+                              _currentPosition != null
+                                  ? Icons.location_on
+                                  : Icons.location_on_outlined,
                               size: 64,
-                              color: AppColors.primary,
+                              color: _currentPosition != null
+                                  ? Colors.green
+                                  : AppColors.primary,
                             ),
+                            if (_isLoadingLocation)
+                              const Positioned.fill(
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
                             Positioned(
                               bottom: 20,
                               child: Row(
@@ -186,12 +342,149 @@ class SignUpStep2Screen extends ConsumerWidget {
 
                       const SizedBox(height: 48),
 
-                      // Buttons
+                      // Manual Location Input
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Location',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _locationController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your city or location',
+                          suffixIcon: _isLoadingLocation
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : _currentPosition != null
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Enable Location Link
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _isLoadingLocation
+                              ? null
+                              : _requestLocationPermission,
+                          icon: Icon(
+                            _currentPosition != null
+                                ? Icons.check_circle
+                                : Icons.my_location,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _currentPosition != null
+                                ? 'Location Enabled ✓'
+                                : 'Enable Location',
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: _currentPosition != null
+                                ? Colors.green
+                                : AppColors.primary,
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (_locationStatus != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _currentPosition != null
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _currentPosition != null
+                                    ? Icons.check_circle
+                                    : Icons.info,
+                                color: _currentPosition != null
+                                    ? Colors.green
+                                    : Colors.orange,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _locationStatus!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _currentPosition != null
+                                        ? Colors.green.shade800
+                                        : Colors.orange.shade800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      const SizedBox(height: 32),
+
+                      // Continue Button
                       SizedBox(
                         height: 56,
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
+                            // Validate that either location is enabled or manually entered
+                            if (_currentPosition == null &&
+                                _locationController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enable location or enter manually',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
                             context.push('/sign-up/step-3');
                           },
                           style: ElevatedButton.styleFrom(
@@ -202,33 +495,12 @@ class SignUpStep2Screen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(28),
                             ),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.near_me),
-                              SizedBox(width: 8),
-                              Text(
-                                'Enable Location',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () {
-                          // Manual entry logic or skip
-                          context.push('/sign-up/step-3');
-                        },
-                        child: Text(
-                          'Enter location manually',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w600,
+                          child: const Text(
+                            'Continue',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),

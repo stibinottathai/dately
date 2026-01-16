@@ -5,6 +5,7 @@ import 'package:dately/features/onboarding/presentation/widgets/onboarding_page.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -62,8 +63,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _onGetStarted();
   }
 
-  void _onGetStarted() {
-    context.go('/sign-in');
+  Future<void> _onGetStarted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('seenOnboarding', true);
+    if (mounted) {
+      context.go('/sign-in');
+    }
   }
 
   @override

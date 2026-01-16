@@ -1,3 +1,4 @@
+import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
 
@@ -15,7 +16,11 @@ class ProfileCard extends StatelessWidget {
           32,
         ), // User requested reduce radius slightly? kept 32 as balanced
         image: DecorationImage(
-          image: NetworkImage(profile.imageUrls.first),
+          image: NetworkImage(
+            profile.imageUrls.isNotEmpty
+                ? profile.imageUrls.first
+                : AppColors.getDefaultAvatarUrl(profile.name),
+          ),
           fit: BoxFit.cover,
         ),
         boxShadow: [
@@ -87,31 +92,49 @@ class ProfileCard extends StatelessWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: profile.interests.map((interest) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      child: Text(
-                        interest,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  children: [
+                    if (profile.occupation != null &&
+                        profile.occupation!.isNotEmpty)
+                      _buildChip(Icons.work, profile.occupation!),
+                    if (profile.education != null &&
+                        profile.education!.isNotEmpty)
+                      _buildChip(Icons.school, profile.education!),
+                    if (profile.height != null && profile.height!.isNotEmpty)
+                      _buildChip(Icons.height, profile.height!),
+                    if (profile.petPreference != null &&
+                        profile.petPreference!.isNotEmpty)
+                      _buildChip(Icons.pets, profile.petPreference!),
+                    if (profile.drinkingHabit != null &&
+                        profile.drinkingHabit!.isNotEmpty)
+                      _buildChip(Icons.wine_bar, profile.drinkingHabit!),
+                  ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
             ),
           ),
         ],

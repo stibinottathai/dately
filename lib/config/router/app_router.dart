@@ -8,6 +8,7 @@ import 'package:dately/features/likes/presentation/likes_screen.dart';
 import 'package:dately/features/main/presentation/main_screen.dart';
 import 'package:dately/features/messages/presentation/chat_screen.dart';
 import 'package:dately/features/messages/presentation/messages_screen.dart';
+import 'package:dately/features/profile/domain/user_profile.dart';
 import 'package:dately/features/profile/presentation/edit_profile_screen.dart';
 import 'package:dately/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:dately/features/splash/presentation/splash_screen.dart';
@@ -48,6 +49,9 @@ GoRouter router(Ref ref) {
         builder: (context, state) => const SignUpStep4Screen(),
       ),
       GoRoute(path: '/counter', redirect: (context, state) => '/main/0'),
+      GoRoute(path: '/likes', redirect: (context, state) => '/main/1'),
+      GoRoute(path: '/messages', redirect: (context, state) => '/main/2'),
+      GoRoute(path: '/profile', redirect: (context, state) => '/main/3'),
       GoRoute(
         path: '/main/:index',
         builder: (context, state) {
@@ -68,7 +72,10 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(
         path: '/edit-profile',
-        builder: (context, state) => const EditProfileScreen(),
+        builder: (context, state) {
+          final profile = state.extra as UserProfile;
+          return EditProfileScreen(profile: profile);
+        },
       ),
     ],
   );

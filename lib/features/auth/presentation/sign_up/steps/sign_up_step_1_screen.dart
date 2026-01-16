@@ -54,33 +54,10 @@ class SignUpStep1Screen extends ConsumerWidget {
                       'Basic Info',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    Text(
-                      'Step 1 of 4',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
+                    // Removed 'Step 1 of 4' text
                   ],
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 0.25,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                ),
+                // Removed progress bar container
                 const SizedBox(height: 32),
 
                 // Headline
@@ -100,6 +77,32 @@ class SignUpStep1Screen extends ConsumerWidget {
                 const SizedBox(height: 32),
 
                 // Form Fields
+                _buildLabel('Email'),
+                const SizedBox(height: 8),
+                TextField(
+                  onChanged: notifier.updateEmail,
+                  keyboardType: TextInputType.emailAddress,
+                  controller: TextEditingController(text: state.email)
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: state.email.length),
+                    ),
+                  decoration: _inputDecoration('Enter your email'),
+                ),
+                const SizedBox(height: 24),
+
+                _buildLabel('Password'),
+                const SizedBox(height: 8),
+                TextField(
+                  onChanged: notifier.updatePassword,
+                  obscureText: true,
+                  controller: TextEditingController(text: state.password)
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: state.password.length),
+                    ),
+                  decoration: _inputDecoration('Enter your password'),
+                ),
+                const SizedBox(height: 24),
+
                 _buildLabel('First Name'),
                 const SizedBox(height: 8),
                 TextField(
@@ -167,12 +170,14 @@ class SignUpStep1Screen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () {
-                    // TODO: Show dropdown/sheet
+                    _showSexualOrientationPicker(context, notifier);
                   },
                   child: AbsorbPointer(
                     child: TextField(
                       controller: TextEditingController(
-                        text: state.sexualOrientation,
+                        text: state.sexualOrientation.isEmpty
+                            ? ''
+                            : state.sexualOrientation,
                       ),
                       decoration: _inputDecoration(
                         'Select',
@@ -231,9 +236,7 @@ class SignUpStep1Screen extends ConsumerWidget {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      context.push('/sign-up/step-2');
-                    },
+                    onPressed: () => _submit(context, notifier, state),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -243,7 +246,7 @@ class SignUpStep1Screen extends ConsumerWidget {
                       ),
                     ),
                     child: const Text(
-                      'Continue',
+                      'Sign Up',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -255,6 +258,87 @@ class SignUpStep1Screen extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showSexualOrientationPicker(
+    BuildContext context,
+    SignUpNotifier notifier,
+  ) {
+    final orientations = [
+      'Straight',
+      'Gay',
+      'Lesbian',
+      'Bisexual',
+      'Pansexual',
+      'Asexual',
+      'Queer',
+      'Questioning',
+      'Other',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Sexual Orientation',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: orientations.length,
+                itemBuilder: (context, index) {
+                  final orientation = orientations[index];
+                  return ListTile(
+                    title: Text(
+                      orientation,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      notifier.updateSexualOrientation(orientation);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
@@ -289,5 +373,41 @@ class SignUpStep1Screen extends ConsumerWidget {
       filled: true,
       fillColor: Colors.white,
     );
+  }
+
+  Future<void> _submit(
+    BuildContext context,
+    SignUpNotifier notifier,
+    SignUpState state,
+  ) async {
+    if (state.email.isEmpty ||
+        state.password.isEmpty ||
+        state.firstName.isEmpty ||
+        state.gender.isEmpty ||
+        state.sexualOrientation.isEmpty ||
+        state.dateOfBirth == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
+
+    try {
+      await notifier.submit();
+      if (context.mounted) {
+        context.go('/counter');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception: ', ''),
+            ), // Basic cleaning
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

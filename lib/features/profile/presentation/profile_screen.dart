@@ -1,70 +1,73 @@
 import 'package:dately/app/theme/app_colors.dart';
-import 'package:dately/features/profile/data/current_user.dart';
 import 'package:dately/features/profile/domain/user_profile.dart';
+import 'package:dately/features/profile/providers/profile_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final UserProfile profile = currentUserProfile;
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _currentPhotoIndex = 0;
+
+  Future<void> _handleLogout() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        context.go('/sign-in');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error logging out: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(userProfileProvider);
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      body: Stack(
-        children: [
-          // Scrollable Content
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top App Bar
-                _buildTopAppBar(),
-
-                // Main Photo Section
-                _buildMainPhoto(),
-
-                // Name and Headline
-                _buildNameSection(),
-
-                // Bio Section
-                _buildBioSection(),
-
-                // Personality Prompts
-                _buildPersonalityPrompts(),
-
-                // Details Grid
-                _buildDetailsGrid(),
-
-                // Spotify Section
-                if (profile.topArtistImages != null) _buildSpotifySection(),
-
-                // Secondary Photos
-                _buildSecondaryPhotos(),
-
-                // Bottom Spacing
-                const SizedBox(height: 100),
-              ],
+      body: profileAsync.when(
+        data: (profile) => Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ... existing children built with 'profile' ...
+                  _buildTopAppBar(),
+                  _buildMainPhoto(profile),
+                  _buildNameSection(profile),
+                  _buildBioSection(profile),
+                  _buildDetailsList(profile),
+                  if (profile.topArtistImages != null)
+                    _buildSpotifySection(profile),
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
-          ),
-
-          // Floating Edit Button
-          _buildFloatingEditButton(),
-        ],
+            _buildFloatingEditButton(profile),
+          ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
 
   Widget _buildTopAppBar() {
     return Container(
+      // ... same content ...
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 16,
         left: 16,
@@ -94,9 +97,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 48,
             height: 48,
             alignment: Alignment.centerRight,
-            child: IconButton(
+            child: PopupMenuButton<String>(
               icon: const Icon(Icons.more_horiz),
-              onPressed: () {},
+              onSelected: (value) {
+                if (value == 'logout') {
+                  _handleLogout();
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return [
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Logout', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ];
+              },
             ),
           ),
         ],
@@ -104,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMainPhoto() {
+  Widget _buildMainPhoto(UserProfile profile) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -121,26 +142,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Stack(
           children: [
-            // Photo
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: profile.photos.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(profile.photos[_currentPhotoIndex]),
+            // Photo Configured as PageView
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: PageView.builder(
+                itemCount: profile.photos.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPhotoIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: NetworkImage(profile.photos[index]),
                         fit: BoxFit.cover,
-                      )
-                    : null,
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black54,
-                  ],
-                  stops: [0.0, 0.4, 1.0],
-                ),
+                      ),
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black54,
+                          ],
+                          stops: [0.0, 0.4, 1.0],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -271,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildNameSection() {
+  Widget _buildNameSection(UserProfile profile) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
@@ -302,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildBioSection() {
+  Widget _buildBioSection(UserProfile profile) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
@@ -312,120 +347,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPersonalityPrompts() {
-    return Container(
-      height: 140,
-      margin: const EdgeInsets.only(top: 24, bottom: 24),
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        children: [
-          if (profile.spontaneousPrompt != null)
-            _buildPromptCard(
-              'The most spontaneous thing I\'ve done',
-              profile.spontaneousPrompt!,
-            ),
-          if (profile.idealSundayPrompt != null)
-            _buildPromptCard('My ideal Sunday', profile.idealSundayPrompt!),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPromptCard(String title, String content) {
-    return Container(
-      width: 256,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            content,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailsGrid() {
+  Widget _buildDetailsList(UserProfile profile) {
     final details = [
-      if (profile.occupation != null) ('work', profile.occupation!),
-      if (profile.height != null) ('straighten', profile.height!),
-      if (profile.education != null) ('school', profile.education!),
-      if (profile.religion != null) ('church', profile.religion!),
-      if (profile.petPreference != null) ('pets', profile.petPreference!),
-      if (profile.drinkingHabit != null) ('wine_bar', profile.drinkingHabit!),
+      if (profile.occupation != null && profile.occupation!.isNotEmpty)
+        ('work', profile.occupation!),
+      if (profile.height != null && profile.height!.isNotEmpty)
+        ('straighten', profile.height!),
+      if (profile.education != null && profile.education!.isNotEmpty)
+        ('school', profile.education!),
+      if (profile.religion != null && profile.religion!.isNotEmpty)
+        ('church', profile.religion!),
+      if (profile.petPreference != null && profile.petPreference!.isNotEmpty)
+        ('pets', profile.petPreference!),
+      if (profile.drinkingHabit != null && profile.drinkingHabit!.isNotEmpty)
+        ('wine_bar', profile.drinkingHabit!),
     ];
 
+    if (details.isEmpty) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'About Me',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 3,
+        children: details.map((detail) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getIconData(detail.$1),
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    detail.$2,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            itemCount: details.length,
-            itemBuilder: (context, index) {
-              final detail = details[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getIconData(detail.$1),
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        detail.$2,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -449,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Widget _buildSpotifySection() {
+  Widget _buildSpotifySection(UserProfile profile) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -547,39 +521,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSecondaryPhotos() {
-    if (profile.photos.length <= 1) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 320,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          image: DecorationImage(
-            image: NetworkImage(profile.photos[1]),
-            fit: BoxFit.cover,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingEditButton() {
+  Widget _buildFloatingEditButton(UserProfile profile) {
     return Positioned(
       bottom: 32,
       left: 32,
       right: 32,
       child: ElevatedButton(
         onPressed: () {
-          context.push('/edit-profile');
+          context.push('/edit-profile', extra: profile);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,

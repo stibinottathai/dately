@@ -1,24 +1,29 @@
 import 'package:dately/app/theme/app_colors.dart';
-import 'package:dately/features/discovery/data/dummy_profiles.dart';
+
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:dately/features/discovery/presentation/advanced_filters_screen.dart';
+import 'package:dately/features/discovery/presentation/profile_detail_screen.dart';
 import 'package:dately/features/discovery/presentation/widgets/profile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class DiscoveryScreen extends StatefulWidget {
+import 'package:dately/features/discovery/providers/discovery_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class DiscoveryScreen extends ConsumerStatefulWidget {
   final bool showBottomNav;
 
   const DiscoveryScreen({super.key, this.showBottomNav = true});
 
   @override
-  State<DiscoveryScreen> createState() => _DiscoveryScreenState();
+  ConsumerState<DiscoveryScreen> createState() => _DiscoveryScreenState();
 }
 
-class _DiscoveryScreenState extends State<DiscoveryScreen>
+class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     with TickerProviderStateMixin {
-  final List<Profile> _profiles = List.from(dummyProfiles);
+  List<Profile> _profiles = [];
+  bool _isLoading = true;
 
   // Animation State
   Offset _dragPosition = Offset.zero;
@@ -41,6 +46,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   @override
   void initState() {
     super.initState();
+    _loadProfiles();
+
     _swipeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -77,6 +84,25 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
     _resetAngleAnimation = Tween<double>(begin: 0, end: 0).animate(
       CurvedAnimation(parent: _resetController, curve: Curves.easeOutBack),
     );
+  }
+
+  Future<void> _loadProfiles() async {
+    try {
+      final profiles = await ref.read(discoveryProvider.future);
+      if (mounted) {
+        setState(() {
+          _profiles = List.from(profiles);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profiles: $e')));
+      }
+    }
   }
 
   @override
@@ -194,8 +220,29 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
     );
   }
 
+  void _openProfileDetails(Profile profile) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProfileDetailScreen(profile: profile),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<Profile>>>(discoveryProvider, (previous, next) {
+      if (next.isLoading) {
+        setState(() => _isLoading = true);
+      } else if (next.hasValue) {
+        setState(() {
+          _profiles = List.from(next.value!);
+          _isLoading = false;
+        });
+      } else if (next.hasError) {
+        setState(() => _isLoading = false);
+      }
+    });
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
@@ -205,7 +252,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
 
           // Main Card Stack
           Expanded(
-            child: _profiles.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _profiles.isEmpty
                 ? _buildEmptyState()
                 : LayoutBuilder(
                     builder: (context, constraints) {
@@ -231,37 +280,38 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           const SizedBox(height: 24),
 
           // Action Buttons (Floating)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildActionButton(
-                  icon: Icons.close,
-                  color: Colors.grey.shade400,
-                  size: 64,
-                  onTap: () => _swipeProgrammatically(false),
-                ),
-                const SizedBox(width: 24),
-                _buildActionButton(
-                  icon: Icons.star,
-                  color: const Color(0xFF9B51E0),
-                  size: 56,
-                  onTap: () {}, // Super like logic
-                ),
-                const SizedBox(width: 24),
-                _buildActionButton(
-                  icon: Icons.favorite,
-                  color: Colors.white,
-                  size: 80,
-                  isPrimary: true,
-                  onTap: _onLoveButtonPressed,
-                  animationController: _loveButtonController,
-                  scaleAnimation: _loveButtonScale,
-                ),
-              ],
+          if (!_isLoading && _profiles.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.close,
+                    color: Colors.grey.shade400,
+                    size: 64,
+                    onTap: () => _swipeProgrammatically(false),
+                  ),
+                  const SizedBox(width: 24),
+                  _buildActionButton(
+                    icon: Icons.star,
+                    color: const Color(0xFF9B51E0),
+                    size: 56,
+                    onTap: () {}, // Super like logic
+                  ),
+                  const SizedBox(width: 24),
+                  _buildActionButton(
+                    icon: Icons.favorite,
+                    color: Colors.white,
+                    size: 80,
+                    isPrimary: true,
+                    onTap: _onLoveButtonPressed,
+                    animationController: _loveButtonController,
+                    scaleAnimation: _loveButtonScale,
+                  ),
+                ],
+              ),
             ),
-          ),
 
           // Bottom Navigation
           if (widget.showBottomNav) _buildBottomNav(),
@@ -301,6 +351,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
               child: Transform.rotate(
                 angle: angle,
                 child: GestureDetector(
+                  onTap: () => _openProfileDetails(profile),
                   onPanStart: _onPanStart,
                   onPanUpdate: _onPanUpdate,
                   onPanEnd: _onPanEnd,
@@ -446,17 +497,71 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'No more profiles nearby!',
-            style: TextStyle(color: Colors.grey, fontSize: 18),
-          ),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.1),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.2),
+                ),
+                child: const Icon(
+                  Icons.radar,
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              "That's everyone for now",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "We've run out of potential matches in your area. Check back later or adjust your filters.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _loadProfiles,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

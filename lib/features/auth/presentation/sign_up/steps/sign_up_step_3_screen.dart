@@ -218,53 +218,91 @@ class SignUpStep3Screen extends ConsumerWidget {
                                 ),
                             itemCount: 6,
                             itemBuilder: (context, index) {
-                              final isMain = index == 0;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: isMain
-                                      ? AppColors.primary.withValues(
-                                          alpha: 0.05,
-                                        )
-                                      : Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isMain
-                                        ? AppColors.primary
-                                        : Colors.grey.shade300,
-                                    width: isMain ? 2 : 1,
-                                    style: BorderStyle.none, // Mock dashed
+                              final hasPhoto = index < state.photos.length;
+                              final isMain = index == 0 && hasPhoto;
+
+                              return GestureDetector(
+                                onTap: () {
+                                  if (hasPhoto) {
+                                    notifier.removePhoto(index);
+                                  } else {
+                                    // Simulating image picking
+                                    // In production, use image_picker package
+                                    notifier.addPhoto(
+                                      'https://picsum.photos/300/400?random=$index',
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isMain
+                                          ? AppColors.primary
+                                          : Colors.grey.shade300,
+                                      width: isMain ? 2 : 1,
+                                    ),
+                                    image: hasPhoto
+                                        ? DecorationImage(
+                                            image: NetworkImage(
+                                              state.photos[index],
+                                            ),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
                                   ),
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (isMain) ...[
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      if (hasPhoto)
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.black54,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        const Icon(
                                           Icons.add,
-                                          color: Colors.white,
-                                          size: 20,
+                                          color: Colors.grey,
                                         ),
-                                      ),
-                                      const Positioned(
-                                        bottom: 12,
-                                        child: Text(
-                                          'MAIN PHOTO',
-                                          style: TextStyle(
-                                            color: AppColors.primary,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
+                                      if (isMain)
+                                        Positioned(
+                                          bottom: 12,
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black54,
+                                              borderRadius: BorderRadius.all(
+                                                Radius.circular(10),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'MAIN',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ] else
-                                      const Icon(Icons.add, color: Colors.grey),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -286,6 +324,29 @@ class SignUpStep3Screen extends ConsumerWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    if (state.interests.length < 3) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please select at least 3 interests to continue.',
+                          ),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (state.photos.length < 2) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please upload at least 2 photos to continue.',
+                          ),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
                     context.push('/sign-up/step-4');
                   },
                   style: ElevatedButton.styleFrom(

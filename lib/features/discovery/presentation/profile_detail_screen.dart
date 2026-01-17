@@ -383,6 +383,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               {'icon': Icons.church, 'text': widget.profile.religion},
               {'icon': Icons.pets, 'text': widget.profile.petPreference},
               {'icon': Icons.wine_bar, 'text': widget.profile.drinkingHabit},
+              {'icon': Icons.translate, 'text': widget.profile.motherTongue},
             ]
             .where(
               (item) =>

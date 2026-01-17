@@ -18,6 +18,7 @@ class Profile extends Equatable {
   final String? drinkingHabit;
   final String? religion;
   final String? height;
+  final String? motherTongue;
   final String gender;
 
   const Profile({
@@ -36,6 +37,7 @@ class Profile extends Equatable {
     this.drinkingHabit,
     this.religion,
     this.height,
+    this.motherTongue,
     this.gender = 'Everyone',
   });
 
@@ -69,6 +71,7 @@ class Profile extends Equatable {
       drinkingHabit: map['drinking_habit'],
       religion: map['religion'],
       height: map['height'],
+      motherTongue: map['mother_tongue'],
       gender: map['gender'] ?? 'Other',
     );
   }
@@ -90,6 +93,7 @@ class Profile extends Equatable {
     drinkingHabit,
     religion,
     height,
+    motherTongue,
     gender,
   ];
 }

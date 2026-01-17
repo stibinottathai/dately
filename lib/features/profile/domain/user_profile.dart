@@ -21,6 +21,7 @@ class UserProfile extends Equatable {
   final String? religion;
   final String? petPreference;
   final String? drinkingHabit;
+  final String? motherTongue;
 
   // Spotify
   final List<String>? topArtistImages;
@@ -45,6 +46,7 @@ class UserProfile extends Equatable {
     this.religion,
     this.petPreference,
     this.drinkingHabit,
+    this.motherTongue,
     this.topArtistImages,
     this.musicTaste,
     this.artistsList,
@@ -95,6 +97,7 @@ class UserProfile extends Equatable {
       religion: map['religion'] as String?,
       petPreference: map['pet_preference'] as String?,
       drinkingHabit: map['drinking_habit'] as String?,
+      motherTongue: map['mother_tongue'] as String?,
       isVisible: map['is_visible'] ?? true,
     );
   }
@@ -117,6 +120,7 @@ class UserProfile extends Equatable {
     religion,
     petPreference,
     drinkingHabit,
+    motherTongue,
     topArtistImages,
     musicTaste,
     artistsList,

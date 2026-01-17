@@ -25,6 +25,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _religionController;
   late TextEditingController _petController;
   late TextEditingController _drinkingController;
+  late TextEditingController _motherTongueController;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -57,6 +58,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _drinkingController = TextEditingController(
       text: widget.profile.drinkingHabit ?? '',
     );
+    _motherTongueController = TextEditingController(
+      text: widget.profile.motherTongue ?? '',
+    );
   }
 
   @override
@@ -69,6 +73,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _religionController.dispose();
     _petController.dispose();
     _drinkingController.dispose();
+    _motherTongueController.dispose();
     super.dispose();
   }
 
@@ -137,6 +142,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         'religion': _religionController.text.trim(),
         'pet_preference': _petController.text.trim(),
         'drinking_habit': _drinkingController.text.trim(),
+        'mother_tongue': _motherTongueController.text.trim(),
         'photos': _currentPhotos, // Save photo URLs
       };
 
@@ -239,6 +245,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               controller: _drinkingController,
               icon: Icons.wine_bar,
               onTap: _showDrinkingPicker,
+            ),
+            const SizedBox(height: 16),
+            _buildPickerField(
+              label: 'Mother Tongue',
+              controller: _motherTongueController,
+              icon: Icons.language,
+              onTap: _showLanguagePicker,
             ),
             const SizedBox(height: 32),
           ],
@@ -573,5 +586,27 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void _showDrinkingPicker() {
     final items = ['Socially', 'Never', 'Occasionally', 'Regularly'];
     _showPicker('Select Drinking Habit', items, _drinkingController);
+  }
+
+  void _showLanguagePicker() {
+    final items = [
+      'Malayalam',
+      'English',
+      'Tamil',
+      'Kannada',
+      'Hindi',
+      'Telugu',
+      'Spanish',
+      'French',
+      'German',
+      'Italian',
+      'Chinese',
+      'Japanese',
+      'Arabic',
+      'Russian',
+      'Portuguese',
+      'Other',
+    ];
+    _showPicker('Select Mother Tongue', items, _motherTongueController);
   }
 }

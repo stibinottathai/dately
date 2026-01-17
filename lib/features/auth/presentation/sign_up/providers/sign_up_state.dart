@@ -11,6 +11,7 @@ class SignUpState with _$SignUpState {
     @Default('') String firstName,
     @Default('') String email,
     @Default('') String password,
+    @Default('') String motherTongue,
     @Default('') String gender,
     @Default('') String sexualOrientation,
     DateTime? dateOfBirth,
@@ -43,6 +44,10 @@ class SignUpNotifier extends _$SignUpNotifier {
 
   void updatePassword(String value) {
     state = state.copyWith(password: value);
+  }
+
+  void updateMotherTongue(String value) {
+    state = state.copyWith(motherTongue: value);
   }
 
   void updateGender(String value) {
@@ -140,6 +145,7 @@ class SignUpNotifier extends _$SignUpNotifier {
         'id': userId,
         'first_name': state.firstName,
         'email': state.email,
+        'mother_tongue': state.motherTongue,
         'gender': state.gender,
         'sexual_orientation': state.sexualOrientation,
         'date_of_birth': state.dateOfBirth?.toIso8601String(),

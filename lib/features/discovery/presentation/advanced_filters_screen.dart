@@ -1,3 +1,4 @@
+import 'package:dately/app/constants/app_constants.dart';
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/providers/filter_provider.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ class AdvancedFiltersScreen extends ConsumerStatefulWidget {
 
 class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
   late RangeValues _ageRange;
-  late double _distance;
+  late List<String> _selectedMotherTongues;
   late String _gender;
 
   @override
@@ -22,7 +23,7 @@ class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
     super.initState();
     final filters = ref.read(filterProvider);
     _ageRange = filters.ageRange;
-    _distance = filters.distance;
+    _selectedMotherTongues = List.from(filters.motherTongues);
     _gender = filters.gender;
   }
 
@@ -60,7 +61,7 @@ class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
                     setState(() {
                       final filters = ref.read(filterProvider);
                       _ageRange = filters.ageRange;
-                      _distance = filters.distance;
+                      _selectedMotherTongues = List.from(filters.motherTongues);
                       _gender = filters.gender;
                     });
                   },
@@ -103,18 +104,61 @@ class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          _buildSlider(
-                            label: 'Distance Radius',
-                            valueLabel: '${_distance.round()} miles',
-                            child: Slider(
-                              value: _distance,
-                              min: 1,
-                              max: 100,
-                              activeColor: AppColors.primary,
-                              inactiveColor: Colors.grey.withOpacity(0.2),
-                              onChanged: (value) =>
-                                  setState(() => _distance = value),
-                            ),
+                          // Mother Tongue Section
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Mother Tongue',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: AppConstants.languages.map((
+                                  language,
+                                ) {
+                                  final isSelected = _selectedMotherTongues
+                                      .contains(language);
+                                  return FilterChip(
+                                    label: Text(language),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedMotherTongues.add(language);
+                                        } else {
+                                          _selectedMotherTongues.remove(
+                                            language,
+                                          );
+                                        }
+                                      });
+                                    },
+                                    backgroundColor: Colors.transparent,
+                                    selectedColor: AppColors.primary
+                                        .withOpacity(0.1),
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Colors.black87,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    showCheckmark: false,
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -206,7 +250,7 @@ class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
                 onPressed: () {
                   ref.read(filterProvider.notifier)
                     ..setAgeRange(_ageRange)
-                    ..setDistance(_distance)
+                    ..setMotherTongues(_selectedMotherTongues)
                     ..setGender(_gender);
                   context.pop();
                 },
@@ -263,31 +307,6 @@ class _AdvancedFiltersScreenState extends ConsumerState<AdvancedFiltersScreen> {
   }
 
   Widget _buildRangeSlider({
-    required String label,
-    required String valueLabel,
-    required Widget child,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-            Text(
-              valueLabel,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-        child,
-      ],
-    );
-  }
-
-  Widget _buildSlider({
     required String label,
     required String valueLabel,
     required Widget child,

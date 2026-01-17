@@ -1,3 +1,4 @@
+import 'package:dately/app/constants/app_constants.dart';
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/auth/presentation/sign_up/providers/sign_up_state.dart';
 import 'package:flutter/material.dart';
@@ -119,6 +120,20 @@ class _SignUpStep1ScreenState extends ConsumerState<SignUpStep1Screen> {
                       TextPosition(offset: state.firstName.length),
                     ),
                   decoration: _inputDecoration('What\'s your name?'),
+                ),
+                const SizedBox(height: 24),
+
+                _buildLabel('Mother Tongue'),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: state.motherTongue.isEmpty ? null : state.motherTongue,
+                  decoration: _inputDecoration('Select Mother Tongue'),
+                  items: AppConstants.languages.map((lang) {
+                    return DropdownMenuItem(value: lang, child: Text(lang));
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) notifier.updateMotherTongue(value);
+                  },
                 ),
                 const SizedBox(height: 24),
 

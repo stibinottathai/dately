@@ -20,6 +20,7 @@ mixin _$SignUpState {
   String get firstName => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
   String get password => throw _privateConstructorUsedError;
+  String get motherTongue => throw _privateConstructorUsedError;
   String get gender => throw _privateConstructorUsedError;
   String get sexualOrientation => throw _privateConstructorUsedError;
   DateTime? get dateOfBirth => throw _privateConstructorUsedError;
@@ -52,6 +53,7 @@ abstract class $SignUpStateCopyWith<$Res> {
     String firstName,
     String email,
     String password,
+    String motherTongue,
     String gender,
     String sexualOrientation,
     DateTime? dateOfBirth,
@@ -85,6 +87,7 @@ class _$SignUpStateCopyWithImpl<$Res, $Val extends SignUpState>
     Object? firstName = null,
     Object? email = null,
     Object? password = null,
+    Object? motherTongue = null,
     Object? gender = null,
     Object? sexualOrientation = null,
     Object? dateOfBirth = freezed,
@@ -111,6 +114,10 @@ class _$SignUpStateCopyWithImpl<$Res, $Val extends SignUpState>
             password: null == password
                 ? _value.password
                 : password // ignore: cast_nullable_to_non_nullable
+                      as String,
+            motherTongue: null == motherTongue
+                ? _value.motherTongue
+                : motherTongue // ignore: cast_nullable_to_non_nullable
                       as String,
             gender: null == gender
                 ? _value.gender
@@ -179,6 +186,7 @@ abstract class _$$SignUpStateImplCopyWith<$Res>
     String firstName,
     String email,
     String password,
+    String motherTongue,
     String gender,
     String sexualOrientation,
     DateTime? dateOfBirth,
@@ -211,6 +219,7 @@ class __$$SignUpStateImplCopyWithImpl<$Res>
     Object? firstName = null,
     Object? email = null,
     Object? password = null,
+    Object? motherTongue = null,
     Object? gender = null,
     Object? sexualOrientation = null,
     Object? dateOfBirth = freezed,
@@ -237,6 +246,10 @@ class __$$SignUpStateImplCopyWithImpl<$Res>
         password: null == password
             ? _value.password
             : password // ignore: cast_nullable_to_non_nullable
+                  as String,
+        motherTongue: null == motherTongue
+            ? _value.motherTongue
+            : motherTongue // ignore: cast_nullable_to_non_nullable
                   as String,
         gender: null == gender
             ? _value.gender
@@ -298,6 +311,7 @@ class _$SignUpStateImpl implements _SignUpState {
     this.firstName = '',
     this.email = '',
     this.password = '',
+    this.motherTongue = '',
     this.gender = '',
     this.sexualOrientation = '',
     this.dateOfBirth,
@@ -322,6 +336,9 @@ class _$SignUpStateImpl implements _SignUpState {
   @override
   @JsonKey()
   final String password;
+  @override
+  @JsonKey()
+  final String motherTongue;
   @override
   @JsonKey()
   final String gender;
@@ -373,7 +390,7 @@ class _$SignUpStateImpl implements _SignUpState {
 
   @override
   String toString() {
-    return 'SignUpState(firstName: $firstName, email: $email, password: $password, gender: $gender, sexualOrientation: $sexualOrientation, dateOfBirth: $dateOfBirth, bio: $bio, interests: $interests, photos: $photos, genderPreference: $genderPreference, ageRangeStart: $ageRangeStart, ageRangeEnd: $ageRangeEnd, prompt1: $prompt1, prompt2: $prompt2, prompt3: $prompt3)';
+    return 'SignUpState(firstName: $firstName, email: $email, password: $password, motherTongue: $motherTongue, gender: $gender, sexualOrientation: $sexualOrientation, dateOfBirth: $dateOfBirth, bio: $bio, interests: $interests, photos: $photos, genderPreference: $genderPreference, ageRangeStart: $ageRangeStart, ageRangeEnd: $ageRangeEnd, prompt1: $prompt1, prompt2: $prompt2, prompt3: $prompt3)';
   }
 
   @override
@@ -386,6 +403,8 @@ class _$SignUpStateImpl implements _SignUpState {
             (identical(other.email, email) || other.email == email) &&
             (identical(other.password, password) ||
                 other.password == password) &&
+            (identical(other.motherTongue, motherTongue) ||
+                other.motherTongue == motherTongue) &&
             (identical(other.gender, gender) || other.gender == gender) &&
             (identical(other.sexualOrientation, sexualOrientation) ||
                 other.sexualOrientation == sexualOrientation) &&
@@ -414,6 +433,7 @@ class _$SignUpStateImpl implements _SignUpState {
     firstName,
     email,
     password,
+    motherTongue,
     gender,
     sexualOrientation,
     dateOfBirth,
@@ -442,6 +462,7 @@ abstract class _SignUpState implements SignUpState {
     final String firstName,
     final String email,
     final String password,
+    final String motherTongue,
     final String gender,
     final String sexualOrientation,
     final DateTime? dateOfBirth,
@@ -462,6 +483,8 @@ abstract class _SignUpState implements SignUpState {
   String get email;
   @override
   String get password;
+  @override
+  String get motherTongue;
   @override
   String get gender;
   @override

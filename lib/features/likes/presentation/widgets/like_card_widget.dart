@@ -5,8 +5,14 @@ import 'package:flutter/material.dart';
 class LikeCardWidget extends StatelessWidget {
   final Like like;
   final VoidCallback onAction;
+  final VoidCallback? onIgnore;
 
-  const LikeCardWidget({super.key, required this.like, required this.onAction});
+  const LikeCardWidget({
+    super.key,
+    required this.like,
+    required this.onAction,
+    this.onIgnore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +154,42 @@ class LikeCardWidget extends StatelessWidget {
           'Matched',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
+      );
+    }
+
+    if (!isSent && onIgnore != null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: onIgnore,
+            icon: Icon(Icons.close, color: Colors.grey.shade400),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: onAction,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: AppColors.primary.withOpacity(0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              minimumSize: const Size(84, 36),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: const Text(
+              'Match',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       );
     }
 

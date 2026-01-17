@@ -343,6 +343,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
+            Consumer(
+              builder: (context, ref, child) {
+                final profileAsync = ref.watch(userProfileProvider);
+                return profileAsync.when(
+                  data: (profile) => SwitchListTile(
+                    title: const Text(
+                      'Hide Profile',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Your profile won\'t be visible in discovery',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    value: !profile.isVisible,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) async {
+                      try {
+                        await Supabase.instance.client
+                            .from('profiles')
+                            .update({'is_visible': !val})
+                            .eq('id', profile.id);
+                        ref.invalidate(userProfileProvider);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error updating visibility: $e'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

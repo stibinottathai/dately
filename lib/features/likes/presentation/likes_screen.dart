@@ -1,9 +1,12 @@
+import 'package:dately/features/discovery/presentation/profile_detail_screen.dart';
 import 'package:dately/features/discovery/presentation/widgets/match_dialog.dart';
 import 'package:dately/features/likes/domain/like.dart';
 import 'package:dately/features/likes/presentation/widgets/like_card_widget.dart';
 import 'package:dately/features/likes/providers/likes_provider.dart';
+import 'package:dately/features/messages/providers/matches_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/app/widgets/app_bottom_nav.dart';
@@ -54,10 +57,14 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
                       padding: const EdgeInsets.only(top: 8, bottom: 80),
                       itemCount: currentLikes.length,
                       itemBuilder: (context, index) {
-                        return LikeCardWidget(
-                          like: currentLikes[index],
-                          onAction: () =>
-                              _handleLikeAction(currentLikes[index]),
+                        final like = currentLikes[index];
+                        return GestureDetector(
+                          onTap: () => _handleCardTap(like),
+                          child: LikeCardWidget(
+                            like: like,
+                            onAction: () => _handleLikeAction(like),
+                            onIgnore: () => _handleIgnoreLike(like),
+                          ),
                         );
                       },
                     ),
@@ -98,6 +105,49 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
         );
       }
     }
+  }
+
+  Future<void> _handleIgnoreLike(Like like) async {
+    await ref.read(likesProvider.notifier).ignoreLike(like.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Like ignored'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleCardTap(Like like) {
+    if (like.isMatched) {
+      if (like.matchId != null) {
+        context.push('/chat/${like.matchId}', extra: like.profile);
+      } else {
+        // Fallback checks matchesProvider (legacy/safety)
+        final matchesState = ref.read(matchesProvider);
+        try {
+          final match = matchesState.matches.firstWhere(
+            (m) => m.otherUser.id == like.profile.id,
+          );
+          context.push('/chat/${match.id}', extra: match);
+        } catch (e) {
+          // Fallback to profile
+          _openProfileDetails(like);
+        }
+      }
+    } else {
+      _openProfileDetails(like);
+    }
+  }
+
+  void _openProfileDetails(Like like) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            ProfileDetailScreen(profile: like.profile, matchId: like.matchId),
+      ),
+    );
   }
 
   Widget _buildTopAppBar() {

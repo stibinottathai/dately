@@ -47,12 +47,16 @@ class LikesNotifier extends StateNotifier<LikesState> {
       // Fetch Matches to exclude/mark as matched
       final matchesResponse = await Supabase.instance.client
           .from('matches')
-          .select('user1_id, user2_id')
+          .select('id, user1_id, user2_id')
           .or('user1_id.eq.$userId,user2_id.eq.$userId');
 
-      final matchedUserIds = (matchesResponse as List).map((m) {
-        return m['user1_id'] == userId ? m['user2_id'] : m['user1_id'];
-      }).toSet();
+      final Map<String, String> matchIdMap = {};
+      for (var m in matchesResponse as List) {
+        final otherId = m['user1_id'] == userId ? m['user2_id'] : m['user1_id'];
+        matchIdMap[otherId] = m['id'] as String;
+      }
+
+      final matchedUserIds = matchIdMap.keys.toSet();
 
       // Fetch Sent Likes
       final sentResponse = await Supabase.instance.client
@@ -63,13 +67,15 @@ class LikesNotifier extends StateNotifier<LikesState> {
       final sentLikes = (sentResponse as List).map((data) {
         final profileData = data['profiles'];
         final profile = Profile.fromMap(profileData);
+        final matchId = matchIdMap[profile.id];
         return Like(
           id: data['id'],
           profile: profile,
           type: LikeType.regular,
           direction: LikeDirection.sent,
           timestamp: DateTime.parse(data['created_at']),
-          isMatched: matchedUserIds.contains(profile.id),
+          isMatched: matchId != null,
+          matchId: matchId,
         );
       }).toList();
 
@@ -176,6 +182,15 @@ class LikesNotifier extends StateNotifier<LikesState> {
       _fetchLikes();
     } catch (e) {
       print('Error unliking user: $e');
+    }
+  }
+
+  Future<void> ignoreLike(String likeId) async {
+    try {
+      await Supabase.instance.client.from('likes').delete().eq('id', likeId);
+      _fetchLikes();
+    } catch (e) {
+      print('Error ignoring like: $e');
     }
   }
 

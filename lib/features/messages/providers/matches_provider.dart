@@ -302,7 +302,8 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
             final u2 = payload.newRecord['user2_id'];
             final myId = Supabase.instance.client.auth.currentUser?.id;
             if (u1 == myId || u2 == myId) {
-              fetchMatches();
+              // Force refresh to ensure new match appears at top
+              fetchMatches(refresh: true);
             }
           },
         )

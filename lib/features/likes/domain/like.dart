@@ -15,6 +15,7 @@ class Like extends Equatable {
   final LikeDirection direction;
   final DateTime timestamp;
   final bool isMatched;
+  final String? matchId;
 
   const Like({
     required this.id,
@@ -23,7 +24,28 @@ class Like extends Equatable {
     required this.direction,
     required this.timestamp,
     this.isMatched = false,
+    this.matchId,
   });
+
+  Like copyWith({
+    String? id,
+    Profile? profile,
+    LikeType? type,
+    LikeDirection? direction,
+    DateTime? timestamp,
+    bool? isMatched,
+    String? matchId,
+  }) {
+    return Like(
+      id: id ?? this.id,
+      profile: profile ?? this.profile,
+      type: type ?? this.type,
+      direction: direction ?? this.direction,
+      timestamp: timestamp ?? this.timestamp,
+      isMatched: isMatched ?? this.isMatched,
+      matchId: matchId ?? this.matchId,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -33,5 +55,6 @@ class Like extends Equatable {
     direction,
     timestamp,
     isMatched,
+    matchId,
   ];
 }

@@ -31,6 +31,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   List<String> _currentPhotos = [];
 
   bool _isSaving = false;
+  int? _uploadingIndex;
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _pickImage(int index) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      setState(() => _uploadingIndex = index);
       // 1. Upload to Supabase
       try {
         final bytes = await image.readAsBytes();
@@ -114,6 +116,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _uploadingIndex = null);
         }
       }
     }
@@ -250,7 +256,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: photoUrl == null
+            child: _uploadingIndex == index
+                ? const Center(child: CircularProgressIndicator())
+                : photoUrl == null
                 ? Icon(Icons.add_a_photo, color: Colors.grey.shade400)
                 : Stack(
                     fit: StackFit.expand,

@@ -2,8 +2,6 @@ import 'package:dately/app/widgets/app_bottom_nav.dart';
 
 import 'package:dately/features/messages/presentation/widgets/conversation_card.dart';
 import 'package:dately/features/messages/presentation/widgets/new_match_avatar.dart';
-import 'package:dately/features/discovery/domain/profile.dart'; // Added for specific typing if needed
-import 'package:dately/features/messages/domain/conversation.dart'; // Added for specific typing if needed
 import 'package:dately/features/messages/providers/matches_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

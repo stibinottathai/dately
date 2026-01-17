@@ -15,6 +15,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,6 +34,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final response = await Supabase.instance.client.auth.signInWithPassword(
@@ -58,6 +63,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -78,13 +89,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   // Top App Bar
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                        ),
-                      ),
                       const Expanded(
                         child: Text(
                           'Dately',
@@ -210,7 +214,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     SizedBox(
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _onSignIn,
+                        onPressed: _isLoading ? null : _onSignIn,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -220,13 +224,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           ),
                           shadowColor: AppColors.primary.withValues(alpha: 0.4),
                         ),
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Sign In',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
 

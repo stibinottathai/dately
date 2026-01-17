@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
@@ -9,6 +12,9 @@ import 'package:dately/features/messages/providers/matches_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -31,9 +37,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool isOnline = false;
   String lastActiveText = 'Active now';
 
+  // Audio Recording
+  late AudioRecorder _audioRecorder;
+  bool _isRecording = false;
+  Timer? _timer;
+  int _recordDuration = 0;
+  String? _audioPath;
+
   @override
   void initState() {
     super.initState();
+    _audioRecorder = AudioRecorder();
     _initializeChat();
     // Mark as read
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -71,6 +85,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _timer?.cancel();
+    _audioRecorder.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -84,6 +100,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .read(chatProvider(widget.conversationId).notifier)
           .sendImageMessage(image.path);
     }
+  }
+
+  Future<void> _startRecording() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission required')),
+      );
+      return;
+    }
+
+    final directory = await getTemporaryDirectory();
+    final filePath =
+        '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _audioRecorder.start(const RecordConfig(), path: filePath);
+
+    setState(() {
+      _isRecording = true;
+      _audioPath = filePath;
+      _recordDuration = 0;
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _recordDuration++;
+        });
+      }
+    });
+  }
+
+  Future<void> _stopRecording() async {
+    _timer?.cancel();
+    if (!_isRecording) return;
+
+    final path = await _audioRecorder.stop();
+    setState(() {
+      _isRecording = false;
+    });
+
+    if (path != null && _recordDuration > 0) {
+      // Send audio
+      ref
+          .read(chatProvider(widget.conversationId).notifier)
+          .sendAudioMessage(path);
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    _timer?.cancel();
+    if (!_isRecording) return;
+
+    await _audioRecorder.stop();
+    // Delete file if exists? audioRecorder.stop returns path, we can delete it.
+    // Assuming framework handles temp shuffle, or we can explicity delete.
+    if (_audioPath != null) {
+      final file = File(_audioPath!);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+
+    setState(() {
+      _isRecording = false;
+      _audioPath = null;
+      _recordDuration = 0;
+    });
   }
 
   void _sendMessage() {
@@ -535,91 +619,129 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Row(
           children: [
             // Add Button
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                shape: BoxShape.circle,
+            if (!_isRecording) ...[
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.add),
+                  iconSize: 24,
+                  onPressed: _pickImage,
+                  padding: EdgeInsets.zero,
+                ),
               ),
-              child: IconButton(
-                icon: const Icon(Icons.add),
-                iconSize: 24,
-                onPressed: _pickImage,
-                padding: EdgeInsets.zero,
-              ),
-            ),
+              const SizedBox(width: 8),
+            ],
 
-            const SizedBox(width: 8),
-
-            // Text Input Field
+            // Text Input Field or Recording Indicator
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: _isRecording
+                      ? Colors.red.shade50
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
+                child: _isRecording
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    // Send Button
-                    Container(
-                      margin: const EdgeInsets.all(4),
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.mic, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatDuration(_recordDuration),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                            const Spacer(),
+                            const Text(
+                              'Release to send',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _messageController,
+                              decoration: const InputDecoration(
+                                hintText: 'Type a message...',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                          // Send Button
+                          Container(
+                            margin: const EdgeInsets.all(4),
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black26, blurRadius: 4),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.send),
+                              iconSize: 16,
+                              color: Colors.white,
+                              onPressed: _sendMessage,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
                         ],
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.send),
-                        iconSize: 16,
-                        color: Colors.white,
-                        onPressed: _sendMessage,
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 
             const SizedBox(width: 8),
 
-            // Microphone Button
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.mic),
-                iconSize: 24,
-                onPressed: () {},
-                padding: EdgeInsets.zero,
+            // Microphone Button (Hold to Record)
+            GestureDetector(
+              onLongPressStart: (_) => _startRecording(),
+              onLongPressEnd: (_) => _stopRecording(),
+              onLongPressCancel: () => _cancelRecording(),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _isRecording ? Colors.red : Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mic,
+                  color: _isRecording ? Colors.white : Colors.black87,
+                  size: 24,
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = (seconds / 60).floor().toString().padLeft(2, '0');
+    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$remainingSeconds';
   }
 }

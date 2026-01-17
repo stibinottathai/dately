@@ -105,6 +105,34 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
+  Future<void> sendAudioMessage(String audioPath) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$userId.m4a';
+      final file = File(audioPath);
+
+      // Upload to Supabase Storage
+      await Supabase.instance.client.storage
+          .from('chat_audio')
+          .upload(fileName, file);
+
+      final audioUrl = Supabase.instance.client.storage
+          .from('chat_audio')
+          .getPublicUrl(fileName);
+
+      await Supabase.instance.client.from('messages').insert({
+        'match_id': matchId,
+        'sender_id': userId,
+        'content': audioUrl,
+        'message_type': 'audio',
+      });
+    } catch (e) {
+      print('Error sending audio message: $e');
+    }
+  }
+
   Future<void> sendImageMessage(String imagePath) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
@@ -137,7 +165,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final senderId = data['sender_id'];
     final typeStr = data['message_type'] as String? ?? 'text';
-    final type = typeStr == 'image' ? MessageType.image : MessageType.text;
+    final type = typeStr == 'image'
+        ? MessageType.image
+        : typeStr == 'audio'
+        ? MessageType.audio
+        : MessageType.text;
 
     return Message(
       id: data['id'],

@@ -1,5 +1,6 @@
 import 'package:dately/features/messages/domain/message.dart';
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/features/messages/presentation/widgets/audio_message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -123,6 +124,11 @@ class MessageBubble extends StatelessWidget {
                               );
                             },
                           ),
+                        )
+                      : message.type == MessageType.audio
+                      ? AudioMessageBubble(
+                          audioUrl: message.content,
+                          isSentByMe: isSent,
                         )
                       : Text(
                           message.content,

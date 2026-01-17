@@ -5,11 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-class SignUpStep1Screen extends ConsumerWidget {
+class SignUpStep1Screen extends ConsumerStatefulWidget {
   const SignUpStep1Screen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SignUpStep1Screen> createState() => _SignUpStep1ScreenState();
+}
+
+class _SignUpStep1ScreenState extends ConsumerState<SignUpStep1Screen> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
     // Watch state to prepopulate fields if needed (e.g. on back navigation)
     final state = ref.watch(signUpNotifierProvider);
     final notifier = ref.read(signUpNotifierProvider.notifier);
@@ -236,7 +243,9 @@ class SignUpStep1Screen extends ConsumerWidget {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () => _submit(context, notifier, state),
+                    onPressed: _isLoading
+                        ? null
+                        : () => _submit(context, notifier, state),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -245,13 +254,22 @@ class SignUpStep1Screen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(28),
                       ),
                     ),
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -392,6 +410,10 @@ class SignUpStep1Screen extends ConsumerWidget {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       await notifier.submit();
       if (context.mounted) {
@@ -407,6 +429,12 @@ class SignUpStep1Screen extends ConsumerWidget {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

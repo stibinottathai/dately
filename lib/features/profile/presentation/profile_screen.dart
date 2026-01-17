@@ -721,6 +721,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ('pets', profile.petPreference!),
       if (profile.drinkingHabit != null && profile.drinkingHabit!.isNotEmpty)
         ('wine_bar', profile.drinkingHabit!),
+      if (profile.motherTongue != null && profile.motherTongue!.isNotEmpty)
+        ('language', profile.motherTongue!),
     ];
 
     if (details.isEmpty) return const SizedBox.shrink();
@@ -778,6 +780,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return Icons.pets;
       case 'wine_bar':
         return Icons.wine_bar_outlined;
+      case 'language':
+        return Icons.translate;
       default:
         return Icons.circle;
     }

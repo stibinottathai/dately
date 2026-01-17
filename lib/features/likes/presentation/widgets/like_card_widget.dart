@@ -161,34 +161,75 @@ class LikeCardWidget extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            onPressed: onIgnore,
-            icon: Icon(Icons.close, color: Colors.grey.shade400),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            style: IconButton.styleFrom(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: onAction,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shadowColor: AppColors.primary.withOpacity(0.3),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              minimumSize: const Size(84, 36),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+          if (!like.isMatched) ...[
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+              ),
+              child: IconButton(
+                onPressed: onIgnore,
+                icon: Icon(Icons.close, color: Colors.grey.shade400, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                style: IconButton.styleFrom(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ),
-            child: const Text(
-              'Match',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            const SizedBox(width: 8),
+          ],
+          if (like.isMatched)
+            ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                disabledBackgroundColor: Colors.green.shade50,
+                disabledForegroundColor: Colors.green.shade700,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                minimumSize: const Size(84, 36),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: Colors.green.shade200),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'Matched',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: onAction,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                shadowColor: AppColors.primary.withOpacity(0.3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                minimumSize: const Size(84, 36),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const Text(
+                'Match',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
         ],
       );
     }

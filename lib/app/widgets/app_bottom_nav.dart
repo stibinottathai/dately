@@ -18,7 +18,9 @@ class AppBottomNav extends ConsumerWidget {
     final likesState = ref.watch(likesProvider);
     final matchesState = ref.watch(matchesProvider);
 
-    final newLikesCount = likesState.receivedLikes.length;
+    final newLikesCount = likesState.receivedLikes
+        .where((like) => !like.isMatched)
+        .length;
     final unreadChats = matchesState.matches.where((m) => m.isNewMatch).length;
 
     return Container(

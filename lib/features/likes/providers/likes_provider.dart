@@ -56,8 +56,6 @@ class LikesNotifier extends StateNotifier<LikesState> {
         matchIdMap[otherId] = m['id'] as String;
       }
 
-      final matchedUserIds = matchIdMap.keys.toSet();
-
       // Fetch Sent Likes
       final sentResponse = await Supabase.instance.client
           .from('likes')
@@ -79,9 +77,6 @@ class LikesNotifier extends StateNotifier<LikesState> {
         );
       }).toList();
 
-      final sentUserIds = sentLikes.map((l) => l.profile.id).toSet();
-      final excludedIds = {...sentUserIds, ...matchedUserIds};
-
       // Fetch Received Likes
       final receivedResponse = await Supabase.instance.client
           .from('likes')
@@ -92,15 +87,18 @@ class LikesNotifier extends StateNotifier<LikesState> {
           .map((data) {
             final profileData = data['profiles'];
             final profile = Profile.fromMap(profileData);
+            final matchId = matchIdMap[profile.id];
             return Like(
               id: data['id'],
               profile: profile,
               type: LikeType.regular,
               direction: LikeDirection.received,
               timestamp: DateTime.parse(data['created_at']),
+              isMatched: matchId != null,
+              matchId: matchId,
             );
           })
-          .where((like) => !excludedIds.contains(like.profile.id))
+          // Remove filtering of excludedIds (matched users)
           .toList();
 
       state = state.copyWith(

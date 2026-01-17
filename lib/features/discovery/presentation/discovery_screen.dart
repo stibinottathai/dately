@@ -14,6 +14,7 @@ import 'package:dately/features/discovery/providers/filter_provider.dart';
 import 'package:dately/features/discovery/providers/search_history_provider.dart';
 import 'package:dately/features/likes/providers/likes_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DiscoveryScreen extends ConsumerStatefulWidget {
   final bool showBottomNav;
@@ -871,7 +872,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
             contentPadding: const EdgeInsets.all(12),
             leading: CircleAvatar(
               radius: 30,
-              backgroundImage: NetworkImage(
+              backgroundImage: CachedNetworkImageProvider(
                 profile.imageUrls.isNotEmpty
                     ? profile.imageUrls.first
                     : 'https://placeholder.com/150',

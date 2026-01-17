@@ -1,6 +1,7 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class NewMatchAvatar extends StatelessWidget {
   final Profile profile;
@@ -37,7 +38,7 @@ class NewMatchAvatar extends StatelessWidget {
                   width: 2,
                 ),
                 image: DecorationImage(
-                  image: NetworkImage(
+                  image: CachedNetworkImageProvider(
                     profile.imageUrls.isNotEmpty
                         ? profile.imageUrls[0]
                         : AppColors.getDefaultAvatarUrl(profile.name),

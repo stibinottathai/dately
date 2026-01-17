@@ -1,4 +1,5 @@
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/app/widgets/cached_image.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:dately/features/messages/domain/conversation.dart';
 import 'package:flutter/material.dart';
@@ -281,13 +282,15 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   setState(() => _currentPhotoIndex = index),
               itemBuilder: (context, index) {
                 if (widget.profile.imageUrls.isEmpty) {
-                  return Image.network(
-                    AppColors.getDefaultAvatarUrl(widget.profile.name),
+                  return CachedImage(
+                    imageUrl: AppColors.getDefaultAvatarUrl(
+                      widget.profile.name,
+                    ),
                     fit: BoxFit.cover,
                   );
                 }
-                return Image.network(
-                  widget.profile.imageUrls[index],
+                return CachedImage(
+                  imageUrl: widget.profile.imageUrls[index],
                   fit: BoxFit.cover,
                 );
               },

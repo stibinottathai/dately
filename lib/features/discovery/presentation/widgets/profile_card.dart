@@ -1,6 +1,7 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileCard extends StatelessWidget {
   final Profile profile;
@@ -16,7 +17,7 @@ class ProfileCard extends StatelessWidget {
           32,
         ), // User requested reduce radius slightly? kept 32 as balanced
         image: DecorationImage(
-          image: NetworkImage(
+          image: CachedNetworkImageProvider(
             profile.imageUrls.isNotEmpty
                 ? profile.imageUrls.first
                 : AppColors.getDefaultAvatarUrl(profile.name),

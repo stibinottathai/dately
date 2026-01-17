@@ -356,6 +356,8 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
               isSentByMe: senderId == userId,
               type: (newRecord['message_type'] as String?) == 'image'
                   ? MessageType.image
+                  : (newRecord['message_type'] as String?) == 'audio'
+                  ? MessageType.audio
                   : MessageType.text,
             );
 

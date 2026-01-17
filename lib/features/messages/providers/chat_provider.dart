@@ -127,7 +127,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'sender_id': userId,
         'content': audioUrl,
         'message_type': 'audio',
-        'metadata': {'duration': duration.inSeconds},
       });
     } catch (e) {
       print('Error sending audio message: $e');

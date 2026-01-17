@@ -3,6 +3,8 @@ import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/messages/presentation/widgets/audio_message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:dately/app/widgets/cached_image.dart';
+import 'package:dately/app/widgets/full_screen_image.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
@@ -27,16 +29,14 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isSent && senderAvatarUrl != null) ...[
-            Container(
-              width: 32,
-              height: 32,
-              margin: const EdgeInsets.only(right: 12, bottom: 4),
-              decoration: BoxDecoration(
+            Padding(
+              padding: const EdgeInsets.only(right: 12, bottom: 4),
+              child: CachedImage(
+                width: 32,
+                height: 32,
+                imageUrl: senderAvatarUrl!,
                 shape: BoxShape.circle,
-                image: DecorationImage(
-                  image: NetworkImage(senderAvatarUrl!),
-                  fit: BoxFit.cover,
-                ),
+                fit: BoxFit.cover,
               ),
             ),
           ] else if (!isSent)
@@ -85,44 +85,21 @@ class MessageBubble extends StatelessWidget {
                         : null,
                   ),
                   child: message.type == MessageType.image
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            message.content,
+                      ? GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    FullScreenImage(imageUrl: message.content),
+                              ),
+                            );
+                          },
+                          child: CachedImage(
+                            imageUrl: message.content,
                             width: 200,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const SizedBox(
-                                width: 200,
-                                height: 200,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return SizedBox(
-                                width: 200,
-                                height: 200,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    value:
-                                        loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                  .cumulativeBytesLoaded /
-                                              loadingProgress
-                                                  .expectedTotalBytes!
-                                        : null,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              );
-                            },
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         )
                       : message.type == MessageType.audio

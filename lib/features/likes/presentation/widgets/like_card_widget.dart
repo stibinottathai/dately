@@ -1,6 +1,7 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/likes/domain/like.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class LikeCardWidget extends StatelessWidget {
   final Like like;
@@ -105,7 +106,7 @@ class LikeCardWidget extends StatelessWidget {
               width: 2,
             ),
             image: DecorationImage(
-              image: NetworkImage(imageUrl),
+              image: CachedNetworkImageProvider(imageUrl),
               fit: BoxFit.cover,
               colorFilter: like.direction == LikeDirection.sent
                   ? ColorFilter.mode(

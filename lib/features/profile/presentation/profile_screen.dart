@@ -1,4 +1,5 @@
 import 'package:dately/app/theme/app_colors.dart';
+import 'package:dately/app/widgets/cached_image.dart';
 
 import 'package:dately/features/profile/domain/user_profile.dart';
 import 'package:dately/features/profile/providers/profile_provider.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -480,7 +482,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: CircleAvatar(
                                 radius: 80,
                                 backgroundColor: Colors.grey.shade50,
-                                backgroundImage: NetworkImage(
+                                backgroundImage: CachedNetworkImageProvider(
                                   AppColors.getDefaultAvatarUrl(profile.name),
                                 ),
                               ),
@@ -514,7 +516,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         return Container(
                           decoration: BoxDecoration(
                             image: DecorationImage(
-                              image: NetworkImage(profile.photos[index]),
+                              image: CachedNetworkImageProvider(
+                                profile.photos[index],
+                              ),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -802,8 +806,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               Row(
                 children: [
-                  Image.network(
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuD2SAAAwRbIbeqoPkHOvHGhN2cqx62N60X6G-hxLliK7LEl08Y6V_2E8l3G8zRSyjES_RAKLROvCDFcpQCu-rO2GomDS1gcWOX0D_2RrGKZDljVndYpmVlgH5uwE3uf-57r7hKHH9PL9O35x6FZ7vIFticTfXEV5C0NeKjnKtbWMoJiF9N8Ow9_alQjZ4gkd0dV6S8l7D98sPmZinaECSd6HHo2p24N_SpgN0zqKo8C_lOhCmXgnfXD58-LkBEd1bdp1HK0MIEAZ60',
+                  CachedImage(
+                    imageUrl:
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuD2SAAAwRbIbeqoPkHOvHGhN2cqx62N60X6G-hxLliK7LEl08Y6V_2E8l3G8zRSyjES_RAKLROvCDFcpQCu-rO2GomDS1gcWOX0D_2RrGKZDljVndYpmVlgH5uwE3uf-57r7hKHH9PL9O35x6FZ7vIFticTfXEV5C0NeKjnKtbWMoJiF9N8Ow9_alQjZ4gkd0dV6S8l7D98sPmZinaECSd6HHo2p24N_SpgN0zqKo8C_lOhCmXgnfXD58-LkBEd1bdp1HK0MIEAZ60',
                     width: 20,
                     height: 20,
                   ),
@@ -844,7 +849,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 4),
                             image: DecorationImage(
-                              image: NetworkImage(
+                              image: CachedNetworkImageProvider(
                                 profile.topArtistImages![index],
                               ),
                               fit: BoxFit.cover,

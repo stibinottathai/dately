@@ -7,6 +7,7 @@ import 'package:dately/features/discovery/domain/profile.dart';
 import 'package:dately/features/messages/domain/conversation.dart';
 
 import 'package:dately/features/messages/presentation/widgets/message_bubble.dart';
+import 'package:dately/app/widgets/cached_image.dart';
 import 'package:dately/features/messages/providers/chat_provider.dart';
 import 'package:dately/features/messages/providers/matches_provider.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,8 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late Profile otherUser;
@@ -44,6 +46,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   int _recordDuration = 0;
   String? _audioPath;
 
+  // Animation
+  late AnimationController _animationController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _opacityAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +60,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(matchesProvider.notifier).markAsRead(widget.conversationId);
     });
+
+    // Animation initialization
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(
+          begin: Offset.zero,
+          end: const Offset(0, -5), // Fly up
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutBack,
+          ),
+        );
+
+    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+      ),
+    );
   }
 
   void _initializeChat() {
@@ -89,6 +120,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _audioRecorder.dispose();
     _messageController.dispose();
     _scrollController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -137,11 +169,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (!_isRecording) return;
 
     final path = await _audioRecorder.stop();
-    setState(() {
-      _isRecording = false;
-    });
-
     if (path != null && _recordDuration > 0) {
+      // Play animation
+      await _animationController.forward();
+
       // Send audio
       try {
         await ref
@@ -154,6 +185,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ).showSnackBar(SnackBar(content: Text('Failed to send audio: $e')));
         }
       }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _recordDuration = 0;
+      });
+      _animationController.reset();
     }
   }
 
@@ -379,8 +418,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               width: double.infinity,
                               height: double.infinity,
                               child: InteractiveViewer(
-                                child: Image.network(
-                                  otherUser.imageUrls[0],
+                                child: CachedImage(
+                                  imageUrl: otherUser.imageUrls[0],
                                   fit: BoxFit.contain,
                                 ),
                               ),
@@ -403,21 +442,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     );
                   }
                 },
-                child: Container(
+                child: CachedImage(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        otherUser.imageUrls.isNotEmpty
-                            ? otherUser.imageUrls[0]
-                            : AppColors.getDefaultAvatarUrl(otherUser.name),
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                  imageUrl: otherUser.imageUrls.isNotEmpty
+                      ? otherUser.imageUrls[0]
+                      : AppColors.getDefaultAvatarUrl(otherUser.name),
+                  shape: BoxShape.circle,
+                  fit: BoxFit.cover,
                 ),
               ),
               if (isOnline)
@@ -589,20 +621,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
+          CachedImage(
             width: 80,
             height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                image: NetworkImage(
-                  otherUser.imageUrls.isNotEmpty
-                      ? otherUser.imageUrls[0]
-                      : AppColors.getDefaultAvatarUrl(otherUser.name),
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
+            imageUrl: otherUser.imageUrls.isNotEmpty
+                ? otherUser.imageUrls[0]
+                : AppColors.getDefaultAvatarUrl(otherUser.name),
+            shape: BoxShape.circle,
+            fit: BoxFit.cover,
           ),
           const SizedBox(height: 16),
           Text(
@@ -727,17 +753,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onLongPressStart: (_) => _startRecording(),
               onLongPressEnd: (_) => _stopRecording(),
               onLongPressCancel: () => _cancelRecording(),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _isRecording ? Colors.red : Colors.grey.shade200,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mic,
-                  color: _isRecording ? Colors.white : Colors.black87,
-                  size: 24,
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return SlideTransition(
+                    position: _slideAnimation,
+                    child: Opacity(
+                      opacity: _opacityAnimation.value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _isRecording ? Colors.red : Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.mic,
+                    color: _isRecording ? Colors.white : Colors.black87,
+                    size: 24,
+                  ),
                 ),
               ),
             ),

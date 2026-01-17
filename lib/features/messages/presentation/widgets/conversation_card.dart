@@ -3,6 +3,7 @@ import 'package:dately/features/messages/domain/message.dart';
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:dately/app/widgets/cached_image.dart';
 
 class ConversationCard extends StatelessWidget {
   final Conversation conversation;
@@ -56,22 +57,16 @@ class ConversationCard extends StatelessWidget {
             // Profile Photo with Online Indicator
             Stack(
               children: [
-                Container(
+                CachedImage(
                   width: 64,
                   height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        conversation.otherUser.imageUrls.isNotEmpty
-                            ? conversation.otherUser.imageUrls[0]
-                            : AppColors.getDefaultAvatarUrl(
-                                conversation.otherUser.name,
-                              ),
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                  imageUrl: conversation.otherUser.imageUrls.isNotEmpty
+                      ? conversation.otherUser.imageUrls[0]
+                      : AppColors.getDefaultAvatarUrl(
+                          conversation.otherUser.name,
+                        ),
+                  shape: BoxShape.circle,
+                  fit: BoxFit.cover,
                 ),
                 if (conversation.isOnline)
                   Positioned(
@@ -111,6 +106,8 @@ class ConversationCard extends StatelessWidget {
                   Text(
                     conversation.lastMessage?.type == MessageType.image
                         ? 'Sent an image 📷'
+                        : conversation.lastMessage?.type == MessageType.audio
+                        ? 'Sent an audio 🎤'
                         : conversation.lastMessage?.content ?? 'New match!',
                     style: TextStyle(
                       fontSize: 14,

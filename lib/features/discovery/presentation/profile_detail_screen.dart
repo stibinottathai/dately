@@ -337,17 +337,19 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
             ],
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(Icons.location_on, size: 16, color: Colors.grey),
-            const SizedBox(width: 4),
-            Text(
-              '${widget.profile.location} • ${widget.profile.distanceMiles} miles away',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
-        ),
+        if (widget.profile.motherTongue?.isNotEmpty ?? false) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.language, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                widget.profile.motherTongue!,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

@@ -70,24 +70,25 @@ class ProfileCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      color: Colors.white70,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${profile.location}, ${profile.distanceMiles} miles away',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                if (profile.motherTongue?.isNotEmpty ?? false)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.language,
+                        color: Colors.white70,
+                        size: 16,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 4),
+                      Text(
+                        profile.motherTongue!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
@@ -107,6 +108,8 @@ class ProfileCard extends StatelessWidget {
                     if (profile.drinkingHabit != null &&
                         profile.drinkingHabit!.isNotEmpty)
                       _buildChip(Icons.wine_bar, profile.drinkingHabit!),
+                    if (profile.motherTongue?.isNotEmpty ?? false)
+                      _buildChip(Icons.language, profile.motherTongue!),
                   ],
                 ),
               ],

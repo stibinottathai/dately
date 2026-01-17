@@ -913,13 +913,15 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
                 Row(
                   children: [
                     Icon(
-                      Icons.location_on_outlined,
+                      profile.motherTongue != null
+                          ? Icons.translate
+                          : Icons.location_on_outlined,
                       size: 14,
                       color: Colors.grey.shade600,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${profile.distanceMiles} miles away',
+                      profile.motherTongue ?? profile.location,
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,

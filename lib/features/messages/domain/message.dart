@@ -14,6 +14,7 @@ class Message extends Equatable {
   final MessageStatus status;
   final bool isSentByMe;
   final MessageType type;
+  final Map<String, dynamic>? metadata;
 
   const Message({
     required this.id,
@@ -25,6 +26,7 @@ class Message extends Equatable {
     required this.status,
     this.isSentByMe = false,
     this.type = MessageType.text,
+    this.metadata,
   });
 
   @override
@@ -38,5 +40,6 @@ class Message extends Equatable {
     status,
     isSentByMe,
     type,
+    metadata,
   ];
 }

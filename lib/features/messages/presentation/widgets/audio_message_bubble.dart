@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class AudioMessageBubble extends StatefulWidget {
   final String audioUrl;
   final bool isSentByMe;
+  final Duration? initialDuration;
 
   const AudioMessageBubble({
     super.key,
     required this.audioUrl,
     required this.isSentByMe,
+    this.initialDuration,
   });
 
   @override
@@ -25,6 +27,9 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    if (widget.initialDuration != null) {
+      _duration = widget.initialDuration!;
+    }
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {

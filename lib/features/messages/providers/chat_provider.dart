@@ -105,7 +105,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  Future<void> sendAudioMessage(String audioPath) async {
+  Future<void> sendAudioMessage(String audioPath, Duration duration) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
@@ -127,9 +127,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'sender_id': userId,
         'content': audioUrl,
         'message_type': 'audio',
+        'metadata': {'duration': duration.inSeconds},
       });
     } catch (e) {
       print('Error sending audio message: $e');
+      rethrow;
     }
   }
 
@@ -182,6 +184,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       status: data['read_at'] != null ? MessageStatus.read : MessageStatus.sent,
       isSentByMe: senderId == userId,
       type: type,
+      metadata: data['metadata'],
     );
   }
 

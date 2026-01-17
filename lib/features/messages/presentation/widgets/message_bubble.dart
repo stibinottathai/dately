@@ -129,6 +129,13 @@ class MessageBubble extends StatelessWidget {
                       ? AudioMessageBubble(
                           audioUrl: message.content,
                           isSentByMe: isSent,
+                          initialDuration:
+                              message.metadata != null &&
+                                  message.metadata!['duration'] != null
+                              ? Duration(
+                                  seconds: message.metadata!['duration'] as int,
+                                )
+                              : null,
                         )
                       : Text(
                           message.content,

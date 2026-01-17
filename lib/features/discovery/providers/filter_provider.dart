@@ -4,14 +4,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FilterState {
   final RangeValues ageRange;
-  final double distance;
+  final List<String> motherTongues;
   final String gender;
   final bool verifiedOnly;
   final String searchQuery;
 
   const FilterState({
     this.ageRange = const RangeValues(18, 50),
-    this.distance = 50,
+    this.motherTongues = const [],
     this.gender = 'Everyone',
     this.verifiedOnly = false,
     this.searchQuery = '',
@@ -19,14 +19,14 @@ class FilterState {
 
   FilterState copyWith({
     RangeValues? ageRange,
-    double? distance,
+    List<String>? motherTongues,
     String? gender,
     bool? verifiedOnly,
     String? searchQuery,
   }) {
     return FilterState(
       ageRange: ageRange ?? this.ageRange,
-      distance: distance ?? this.distance,
+      motherTongues: motherTongues ?? this.motherTongues,
       gender: gender ?? this.gender,
       verifiedOnly: verifiedOnly ?? this.verifiedOnly,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -59,7 +59,7 @@ class FilterNotifier extends StateNotifier<FilterState> {
             (prefs['ageRange']['start'] as num).toDouble(),
             (prefs['ageRange']['end'] as num).toDouble(),
           ),
-          distance: (prefs['distance'] as num).toDouble(),
+          motherTongues: List<String>.from(prefs['motherTongues'] ?? []),
           gender: prefs['gender'] as String,
           verifiedOnly: prefs['verifiedOnly'] as bool,
         );
@@ -76,7 +76,7 @@ class FilterNotifier extends StateNotifier<FilterState> {
 
     final prefs = {
       'ageRange': {'start': state.ageRange.start, 'end': state.ageRange.end},
-      'distance': state.distance,
+      'motherTongues': state.motherTongues,
       'gender': state.gender,
       'verifiedOnly': state.verifiedOnly,
     };
@@ -96,8 +96,8 @@ class FilterNotifier extends StateNotifier<FilterState> {
     _savePreferences();
   }
 
-  void setDistance(double distance) {
-    state = state.copyWith(distance: distance);
+  void setMotherTongues(List<String> tongues) {
+    state = state.copyWith(motherTongues: tongues);
     _savePreferences();
   }
 

@@ -914,15 +914,13 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
                 Row(
                   children: [
                     Icon(
-                      profile.motherTongue != null
-                          ? Icons.translate
-                          : Icons.location_on_outlined,
+                      profile.motherTongue != null ? Icons.translate : null,
                       size: 14,
                       color: Colors.grey.shade600,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      profile.motherTongue ?? profile.location,
+                      profile.motherTongue ?? "",
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,

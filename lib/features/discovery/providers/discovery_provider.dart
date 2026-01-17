@@ -87,6 +87,14 @@ final discoveryProvider = FutureProvider.autoDispose<List<Profile>>((
       }
     }
 
+    // 3. Mother Tongue Filter
+    if (filters.motherTongues.isNotEmpty) {
+      if (profile.motherTongue == null ||
+          !filters.motherTongues.contains(profile.motherTongue!)) {
+        return false;
+      }
+    }
+
     if (filters.verifiedOnly && !profile.isVerified) {
       return false;
     }

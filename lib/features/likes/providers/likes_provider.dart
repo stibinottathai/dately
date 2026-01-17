@@ -225,6 +225,22 @@ class LikesNotifier extends StateNotifier<LikesState> {
             }
           },
         )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'likes',
+          callback: (payload) {
+            _fetchLikes();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'matches',
+          callback: (payload) {
+            _fetchLikes();
+          },
+        )
         .subscribe();
   }
 

@@ -206,6 +206,111 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
     state = MatchesState(matches: updatedMatches, isLoading: state.isLoading);
   }
 
+  Future<void> unmatchUser(String matchId) async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      // Find the match to get the other user's ID
+      final match = state.matches.firstWhere(
+        (m) => m.id == matchId,
+        orElse: () => Conversation(
+          id: '',
+          otherUser: Profile(
+            id: '',
+            name: '',
+            age: 0,
+            bio: '',
+            location: '',
+            distanceMiles: 0,
+            imageUrls: [],
+            interests: [],
+          ),
+          unreadCount: 0,
+          isNewMatch: false,
+          isOnline: false,
+        ),
+      );
+
+      if (match.id.isEmpty) {
+        // Match not found in local state, fetch from DB or just delete items
+        // It's safer to fetch the match to get IDs if possible, but if not found,
+        // we can attempt to just delete the match row if we can't find the other user.
+        // However, we really need the other user ID to delete the likes.
+        // Let's assume for now if it's not in state, we might miss deleting likes.
+        // Or we could fetch it from DB first.
+
+        final matchData = await Supabase.instance.client
+            .from('matches')
+            .select()
+            .eq('id', matchId)
+            .maybeSingle();
+
+        if (matchData != null) {
+          final u1 = matchData['user1_id'];
+          final u2 = matchData['user2_id'];
+          final otherId = u1 == userId ? u2 : u1;
+
+          // Clean up
+          await _performUnmatchCleanup(matchId, userId, otherId);
+        } else {
+          // Provide fallback cleanup if match already gone?
+          // Just try to delete match row to be safe
+          await Supabase.instance.client
+              .from('matches')
+              .delete()
+              .eq('id', matchId);
+        }
+      } else {
+        await _performUnmatchCleanup(matchId, userId, match.otherUser.id);
+      }
+
+      // Remove from local state
+      final updatedMatches = state.matches
+          .where((m) => m.id != matchId)
+          .toList();
+
+      state = MatchesState(
+        matches: updatedMatches,
+        isLoading: state.isLoading,
+        page: state.page,
+        hasMore: state.hasMore,
+      );
+    } catch (e) {
+      print('Error unmatching user: $e');
+    }
+  }
+
+  Future<void> _performUnmatchCleanup(
+    String matchId,
+    String myId,
+    String otherId,
+  ) async {
+    // 1. Delete all messages for this match
+    await Supabase.instance.client
+        .from('messages')
+        .delete()
+        .eq('match_id', matchId);
+
+    // 2. Delete the match record
+    await Supabase.instance.client.from('matches').delete().eq('id', matchId);
+
+    // 3. Delete Likes (Both directions)
+    // Delete like sent by Me to Them
+    await Supabase.instance.client
+        .from('likes')
+        .delete()
+        .eq('from_user_id', myId)
+        .eq('to_user_id', otherId);
+
+    // Delete like sent by Them to Me
+    await Supabase.instance.client
+        .from('likes')
+        .delete()
+        .eq('from_user_id', otherId)
+        .eq('to_user_id', myId);
+  }
+
   RealtimeChannel? _subscription;
 
   void _subscribeToMessages() {

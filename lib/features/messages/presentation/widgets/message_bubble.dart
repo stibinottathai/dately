@@ -11,7 +11,7 @@ class MessageBubble extends StatelessWidget {
   const MessageBubble({super.key, required this.message, this.senderAvatarUrl});
 
   String _formatTime(DateTime timestamp) {
-    return DateFormat('h:mm a').format(timestamp);
+    return DateFormat('h:mm a').format(timestamp.toLocal());
   }
 
   @override
@@ -129,6 +129,13 @@ class MessageBubble extends StatelessWidget {
                       ? AudioMessageBubble(
                           audioUrl: message.content,
                           isSentByMe: isSent,
+                          initialDuration:
+                              message.metadata != null &&
+                                  message.metadata!['duration'] != null
+                              ? Duration(
+                                  seconds: message.metadata!['duration'] as int,
+                                )
+                              : null,
                         )
                       : Text(
                           message.content,
@@ -153,8 +160,8 @@ class MessageBubble extends StatelessWidget {
                             ? (message.status == MessageStatus.read
                                   ? 'Read ${_formatTime(message.timestamp)}'
                                   : message.status == MessageStatus.delivered
-                                  ? 'Delivered'
-                                  : 'Sent')
+                                  ? 'Delivered ${_formatTime(message.timestamp)}'
+                                  : 'Sent ${_formatTime(message.timestamp)}')
                             : _formatTime(message.timestamp),
                         style: TextStyle(
                           fontSize: 10,

@@ -143,9 +143,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     if (path != null && _recordDuration > 0) {
       // Send audio
-      ref
-          .read(chatProvider(widget.conversationId).notifier)
-          .sendAudioMessage(path);
+      try {
+        await ref
+            .read(chatProvider(widget.conversationId).notifier)
+            .sendAudioMessage(path, Duration(seconds: _recordDuration));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to send audio: $e')));
+        }
+      }
     }
   }
 

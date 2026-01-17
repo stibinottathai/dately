@@ -7,12 +7,14 @@ class FilterState {
   final double distance;
   final String gender;
   final bool verifiedOnly;
+  final String searchQuery;
 
   const FilterState({
     this.ageRange = const RangeValues(18, 50),
     this.distance = 50,
     this.gender = 'Everyone',
     this.verifiedOnly = false,
+    this.searchQuery = '',
   });
 
   FilterState copyWith({
@@ -20,12 +22,14 @@ class FilterState {
     double? distance,
     String? gender,
     bool? verifiedOnly,
+    String? searchQuery,
   }) {
     return FilterState(
       ageRange: ageRange ?? this.ageRange,
       distance: distance ?? this.distance,
       gender: gender ?? this.gender,
       verifiedOnly: verifiedOnly ?? this.verifiedOnly,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }
@@ -44,7 +48,9 @@ class FilterNotifier extends StateNotifier<FilterState> {
           .from('profiles')
           .select('discovery_preferences')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (response == null) return;
 
       final prefs = response['discovery_preferences'];
       if (prefs != null) {
@@ -103,6 +109,11 @@ class FilterNotifier extends StateNotifier<FilterState> {
   void setVerifiedOnly(bool verified) {
     state = state.copyWith(verifiedOnly: verified);
     _savePreferences();
+  }
+
+  void setSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query);
+    // Don't save search query to preferences
   }
 
   void reset() {

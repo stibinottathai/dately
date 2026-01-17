@@ -1,21 +1,51 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:dately/features/discovery/domain/profile.dart';
+import 'package:dately/features/messages/domain/conversation.dart';
 import 'package:flutter/material.dart';
 
-class ProfileDetailScreen extends StatefulWidget {
-  final Profile profile;
+import 'package:dately/features/likes/providers/likes_provider.dart';
 
-  const ProfileDetailScreen({super.key, required this.profile});
+import 'package:dately/features/messages/providers/matches_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+class ProfileDetailScreen extends ConsumerStatefulWidget {
+  final Profile profile;
+  final String? matchId;
+
+  const ProfileDetailScreen({super.key, required this.profile, this.matchId});
 
   @override
-  State<ProfileDetailScreen> createState() => _ProfileDetailScreenState();
+  ConsumerState<ProfileDetailScreen> createState() =>
+      _ProfileDetailScreenState();
 }
 
-class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
+class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   int _currentPhotoIndex = 0;
 
   @override
   Widget build(BuildContext context) {
+    // Check if matched
+    final matchesState = ref.watch(matchesProvider);
+    final match = matchesState.matches.firstWhere(
+      (m) => m.otherUser.id == widget.profile.id,
+      orElse: () => Conversation(
+        id: widget.matchId ?? '',
+        otherUser: widget.profile,
+        unreadCount: 0,
+        isNewMatch: false,
+        isOnline: false,
+      ),
+    );
+    final isMatched = match.id.isNotEmpty;
+
+    // Check if like sent
+    final likesState = ref.watch(likesProvider);
+    final sentLike = likesState.sentLikes
+        .where((l) => l.profile.id == widget.profile.id)
+        .firstOrNull;
+    final isLikeSent = sentLike != null;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -51,6 +81,123 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               child: IconButton(
                 icon: const Icon(Icons.arrow_downward, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          // Bottom Action Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0),
+                    Colors.white,
+                    Colors.white,
+                  ],
+                  stops: const [0.0, 0.2, 1.0],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (isMatched) {
+                          // Navigate to Chat
+                          if (match.id == widget.matchId) {
+                            // If we are using the passed matchID (and not a full conversation from provider)
+                            // We should pass profile as extra so ChatScreen handles it essentially as a new match
+                            context.push(
+                              '/chat/${match.id}',
+                              extra: widget.profile,
+                            );
+                          } else {
+                            context.push('/chat/${match.id}', extra: match);
+                          }
+                        } else if (isLikeSent) {
+                          // Retract Like
+                          await ref
+                              .read(likesProvider.notifier)
+                              .unlikeUser(sentLike.id);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Like Retracted')),
+                            );
+                          }
+                        } else {
+                          // Like User
+                          final matchId = await ref
+                              .read(likesProvider.notifier)
+                              .likeUser(widget.profile.id);
+
+                          if (mounted) {
+                            if (matchId != null) {
+                              // It's a match!
+                              // Maybe show match dialog here?
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('It\'s a Match! 🎉'),
+                                ),
+                              );
+                              // Refresh matches to ensure we get the ID next time
+                              ref.read(matchesProvider.notifier).fetchMatches();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Like Sent! ❤️')),
+                              );
+                            }
+                            Navigator.of(context).pop();
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isMatched
+                            ? AppColors.primary
+                            : isLikeSent
+                            ? Colors.grey.shade300
+                            : const Color(0xFFE94057),
+                        foregroundColor: isLikeSent
+                            ? Colors.black87
+                            : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        elevation: isLikeSent ? 0 : 4,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isMatched
+                                ? Icons.chat_bubble_outline
+                                : isLikeSent
+                                ? Icons.undo
+                                : Icons.favorite,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isMatched
+                                ? 'Message'
+                                : isLikeSent
+                                ? 'Retract'
+                                : 'Like',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

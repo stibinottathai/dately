@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 
 import 'package:dately/features/discovery/presentation/widgets/match_dialog.dart';
 import 'package:dately/features/discovery/providers/discovery_provider.dart';
+import 'package:dately/features/discovery/providers/filter_provider.dart';
+import 'package:dately/features/discovery/providers/search_history_provider.dart';
 import 'package:dately/features/likes/providers/likes_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,10 +47,16 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
   late Animation<Offset> _resetAnimation;
   late Animation<double> _resetAngleAnimation;
 
+  // Search State
+  bool _isSearchVisible = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
-    _loadProfiles();
+    // No manual load needed, ref.listen in build will handle it.
+    // However, we want to ensure the provider is hot so we might want to read it once or just let the build method handle subscription.
 
     _swipeController = AnimationController(
       vsync: this,
@@ -88,23 +96,10 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     );
   }
 
-  Future<void> _loadProfiles() async {
-    try {
-      final profiles = await ref.read(discoveryProvider.future);
-      if (mounted) {
-        setState(() {
-          _profiles = List.from(profiles);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading profiles: $e')));
-      }
-    }
+  Future<void> _refreshProfiles() async {
+    // Invalidate the RAW provider to force network fetch
+    ref.invalidate(rawProfilesProvider);
+    // discoveryProvider will automatically update
   }
 
   @override
@@ -112,6 +107,8 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     _swipeController.dispose();
     _loveButtonController.dispose();
     _resetController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -265,7 +262,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
         setState(() => _isLoading = true);
       } else if (next.hasValue) {
         setState(() {
-          _profiles = List.from(next.value!);
+          _profiles = next.value ?? [];
           _isLoading = false;
         });
       } else if (next.hasError) {
@@ -286,6 +283,10 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
                 ? const Center(child: CircularProgressIndicator())
                 : _profiles.isEmpty
                 ? _buildEmptyState()
+                : _isSearchVisible
+                ? _searchController.text.isEmpty
+                      ? _buildSearchHistory()
+                      : _buildSearchResults()
                 : LayoutBuilder(
                     builder: (context, constraints) {
                       return Stack(
@@ -310,7 +311,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
           const SizedBox(height: 24),
 
           // Action Buttons (Floating)
-          if (!_isLoading && _profiles.isNotEmpty)
+          if (!_isLoading && _profiles.isNotEmpty && !_isSearchVisible)
             Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
               child: Row(
@@ -576,7 +577,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: _loadProfiles,
+              onPressed: _refreshProfiles,
               icon: const Icon(Icons.refresh),
               label: const Text('Refresh'),
               style: ElevatedButton.styleFrom(
@@ -601,60 +602,135 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
   Widget _buildHeader() {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 24,
         right: 24,
-        bottom: 16,
+        bottom: 8,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Transform.rotate(
-                angle: 0.2,
-                child: const Icon(
-                  Icons.water_drop,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-              ),
-              Transform.translate(
-                offset: const Offset(-6, 0),
-                child: const Text(
-                  '_RK',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -1,
+      child: _isSearchVisible
+          ? Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Search people...',
+                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.grey,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            // Reset filter
+                            ref
+                                .read(filterProvider.notifier)
+                                .setSearchQuery('');
+                            // Hide search
+                            setState(() => _isSearchVisible = false);
+                            // No need to manually refresh - provider updates automatically
+                          },
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        ref.read(filterProvider.notifier).setSearchQuery(value);
+                        setState(
+                          () {},
+                        ); // Rebuild to show/hide history based on text
+                      },
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          ref
+                              .read(searchHistoryProvider.notifier)
+                              .addSearch(value);
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Dately',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Transform.rotate(
+                      angle: 0.2,
+                      child: const Icon(
+                        Icons.water_drop,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
+                    Transform.translate(
+                      offset: const Offset(-6, 0),
+                      child: const Text(
+                        '_RK',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Dately',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          IconButton(
-            onPressed: _onFilterPressed,
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 1,
-              shadowColor: Colors.black.withOpacity(0.1),
-              side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() => _isSearchVisible = true);
+                        _searchFocusNode.requestFocus();
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        elevation: 1,
+                        shadowColor: Colors.black.withOpacity(0.1),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                      icon: const Icon(Icons.search),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      onPressed: _onFilterPressed,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        elevation: 1,
+                        shadowColor: Colors.black.withOpacity(0.1),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                      icon: const Icon(Icons.tune),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            icon: const Icon(Icons.tune),
-          ),
-        ],
-      ),
     );
   }
 
@@ -699,5 +775,172 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen>
     }
 
     return GestureDetector(onTap: onTap, child: button);
+  }
+
+  Widget _buildSearchHistory() {
+    final history = ref.watch(searchHistoryProvider);
+
+    if (history.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'No recent searches',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Searches',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  ref.read(searchHistoryProvider.notifier).clearHistory();
+                },
+                child: const Text('Clear All'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: history.length,
+            itemBuilder: (context, index) {
+              final query = history[index];
+              return ListTile(
+                leading: const Icon(Icons.history, color: Colors.grey),
+                title: Text(query),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+                  onPressed: () {
+                    ref
+                        .read(searchHistoryProvider.notifier)
+                        .removeSearch(query);
+                  },
+                ),
+                onTap: () {
+                  _searchController.text = query;
+                  ref.read(filterProvider.notifier).setSearchQuery(query);
+                  // Add to history again to move to top
+                  ref.read(searchHistoryProvider.notifier).addSearch(query);
+                  setState(() {});
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchResults() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _profiles.length,
+      itemBuilder: (context, index) {
+        final profile = _profiles[index];
+        return Card(
+          elevation: 0,
+          color: Colors.white,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: CircleAvatar(
+              radius: 30,
+              backgroundImage: NetworkImage(
+                profile.imageUrls.isNotEmpty
+                    ? profile.imageUrls.first
+                    : 'https://placeholder.com/150',
+              ),
+              backgroundColor: Colors.grey.shade200,
+            ),
+            title: Text(
+              '${profile.name}, ${profile.age}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (profile.occupation != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.work_outline,
+                        size: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        profile.occupation!,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${profile.distanceMiles} miles away',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.primary),
+            onTap: () {
+              if (_searchController.text.isNotEmpty) {
+                ref
+                    .read(searchHistoryProvider.notifier)
+                    .addSearch(_searchController.text);
+              }
+              _openProfileDetails(profile);
+            },
+          ),
+        );
+      },
+    );
   }
 }

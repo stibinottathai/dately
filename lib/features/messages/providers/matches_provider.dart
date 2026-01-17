@@ -8,18 +8,43 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class MatchesState {
   final List<Conversation> matches;
   final bool isLoading;
+  final int page;
+  final bool hasMore;
 
-  MatchesState({this.matches = const [], this.isLoading = false});
+  MatchesState({
+    this.matches = const [],
+    this.isLoading = false,
+    this.page = 0,
+    this.hasMore = true,
+  });
 }
 
 class MatchesNotifier extends StateNotifier<MatchesState> {
   MatchesNotifier() : super(MatchesState()) {
-    fetchMatches();
+    fetchMatches(refresh: true);
     _subscribeToMessages();
   }
 
-  Future<void> fetchMatches() async {
-    state = MatchesState(isLoading: true, matches: state.matches);
+  static const int _limit = 15;
+
+  Future<void> fetchMatches({bool refresh = false}) async {
+    if (refresh) {
+      state = MatchesState(
+        isLoading: true,
+        matches: [],
+        page: 0,
+        hasMore: true,
+      );
+    } else {
+      if (!state.hasMore) return;
+      state = MatchesState(
+        isLoading: true,
+        matches: state.matches,
+        page: state.page,
+        hasMore: state.hasMore,
+      );
+    }
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       state = MatchesState(isLoading: false);
@@ -27,8 +52,8 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
     }
 
     try {
-      // Fetch matches where I am user1 or user2
-      // We need to join profiles for both user1 and user2 to decide which one is "other"
+      final from = state.page * _limit;
+      final to = from + _limit - 1;
 
       final response = await Supabase.instance.client
           .from('matches')
@@ -36,11 +61,12 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
             '*, user1:profiles!user1_id(*), user2:profiles!user2_id(*), messages(id, content, sender_id, created_at, match_id, message_type)',
           )
           .or('user1_id.eq.$userId,user2_id.eq.$userId')
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       final prefs = await SharedPreferences.getInstance();
 
-      final matches = (response as List).map((data) {
+      final newMatches = (response as List).map((data) {
         final user1Id = data['user1_id'];
 
         final isUser1Me = user1Id == userId;
@@ -73,22 +99,20 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
         Message? lastMessage;
 
         if (messagesData != null && messagesData.isNotEmpty) {
-          // Sort to find latest
-          messagesData.sort(
+          final sortedMessages = List<dynamic>.from(messagesData);
+          sortedMessages.sort(
             (a, b) => DateTime.parse(
               b['created_at'],
             ).compareTo(DateTime.parse(a['created_at'])),
           );
-          final lastMsgData = messagesData.first;
+          final lastMsgData = sortedMessages.first;
           final senderId = lastMsgData['sender_id'];
 
           lastMessage = Message(
             id: lastMsgData['id'],
             conversationId: lastMsgData['match_id'],
             senderId: senderId,
-            receiverId: senderId == userId
-                ? otherProfile.id
-                : userId, // Derived
+            receiverId: senderId == userId ? otherProfile.id : userId,
             content: lastMsgData['content'],
             timestamp: DateTime.parse(lastMsgData['created_at']),
             status: MessageStatus.sent,
@@ -106,11 +130,8 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
 
         bool isUnread = false;
         if (lastReadStr == null) {
-          // New match, never opened
           isUnread = true;
         } else if (lastMessage != null && !lastMessage.isSentByMe) {
-          // Check if last message is newer than last read
-          // Adding 1 second buffer to avoid equality issues with precision
           if (lastMessage.timestamp.isAfter(lastReadTime)) {
             isUnread = true;
           }
@@ -126,10 +147,36 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
         );
       }).toList();
 
-      state = MatchesState(matches: matches, isLoading: false);
+      // Mapped above...
+
+      final hasMore = newMatches.length >= _limit;
+
+      // Deduplication Logic
+      List<Conversation> updatedMatches;
+      if (refresh) {
+        updatedMatches = newMatches;
+      } else {
+        final existingIds = state.matches.map((m) => m.id).toSet();
+        final uniqueNewMatches = newMatches
+            .where((m) => !existingIds.contains(m.id))
+            .toList();
+        updatedMatches = [...state.matches, ...uniqueNewMatches];
+      }
+
+      state = MatchesState(
+        matches: updatedMatches,
+        isLoading: false,
+        page: state.page + 1,
+        hasMore: hasMore,
+      );
     } catch (e) {
       print('Error fetching matches: $e');
-      state = MatchesState(isLoading: false);
+      state = MatchesState(
+        isLoading: false,
+        matches: state.matches,
+        page: state.page,
+        hasMore: state.hasMore,
+      );
     }
   }
 
@@ -255,7 +302,8 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
             final u2 = payload.newRecord['user2_id'];
             final myId = Supabase.instance.client.auth.currentUser?.id;
             if (u1 == myId || u2 == myId) {
-              fetchMatches();
+              // Force refresh to ensure new match appears at top
+              fetchMatches(refresh: true);
             }
           },
         )

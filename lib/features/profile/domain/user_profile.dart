@@ -26,6 +26,7 @@ class UserProfile extends Equatable {
   final List<String>? topArtistImages;
   final String? musicTaste;
   final String? artistsList;
+  final bool isVisible;
 
   const UserProfile({
     required this.id,
@@ -47,6 +48,7 @@ class UserProfile extends Equatable {
     this.topArtistImages,
     this.musicTaste,
     this.artistsList,
+    this.isVisible = true,
   });
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
@@ -93,6 +95,7 @@ class UserProfile extends Equatable {
       religion: map['religion'] as String?,
       petPreference: map['pet_preference'] as String?,
       drinkingHabit: map['drinking_habit'] as String?,
+      isVisible: map['is_visible'] ?? true,
     );
   }
 
@@ -117,5 +120,6 @@ class UserProfile extends Equatable {
     topArtistImages,
     musicTaste,
     artistsList,
+    isVisible,
   ];
 }

@@ -49,6 +49,7 @@ final rawProfilesProvider = FutureProvider.autoDispose<List<Profile>>((
       drinkingHabit: map['drinking_habit'],
       religion: map['religion'],
       height: map['height'],
+      motherTongue: map['mother_tongue'],
       gender: map['gender'] ?? 'Other',
     );
   }).toList();

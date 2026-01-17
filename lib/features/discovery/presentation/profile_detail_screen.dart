@@ -66,6 +66,63 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                       const SizedBox(height: 24),
                       if (widget.profile.interests.isNotEmpty)
                         _buildInterests(),
+                      const SizedBox(height: 32),
+                      if (isMatched)
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Unmatch User?'),
+                                  content: const Text(
+                                    'Are you sure you want to unmatch? This action cannot be undone.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                      ),
+                                      child: const Text('Unmatch'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirm == true) {
+                                await ref
+                                    .read(matchesProvider.notifier)
+                                    .unmatchUser(match.id);
+                                if (mounted) {
+                                  context.pop(); // Close profile details
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.person_remove),
+                            label: const Text('Unmatch & Remove'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red.shade400,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.red.shade100),
+                              ),
+                              backgroundColor: Colors.red.shade50,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 100), // Space for bottom buttons
                     ],
                   ),
@@ -84,64 +141,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               ),
             ),
           ),
-          if (isMatched)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: CircleAvatar(
-                backgroundColor: Colors.black.withOpacity(0.4),
-                child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onSelected: (value) async {
-                    if (value == 'unmatch') {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Unmatch User?'),
-                          content: const Text(
-                            'Are you sure you want to unmatch? This action cannot be undone.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
-                              child: const Text('Unmatch'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirm == true) {
-                        await ref
-                            .read(matchesProvider.notifier)
-                            .unmatchUser(match.id);
-                        if (mounted) {
-                          context.pop(); // Close profile details
-                        }
-                      }
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'unmatch',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person_remove, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Unmatch', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           // Bottom Action Bar
           Positioned(
             bottom: 0,

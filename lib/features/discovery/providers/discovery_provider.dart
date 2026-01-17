@@ -19,7 +19,7 @@ final rawProfilesProvider = FutureProvider.autoDispose<List<Profile>>((
 
   final data = response as List<dynamic>;
 
-  return data.map((map) {
+  final profiles = data.map((map) {
     // Calculate Age
     final dobStr = map['date_of_birth'] as String?;
     int age = 24; // Default
@@ -52,6 +52,9 @@ final rawProfilesProvider = FutureProvider.autoDispose<List<Profile>>((
       gender: map['gender'] ?? 'Other',
     );
   }).toList();
+
+  profiles.shuffle();
+  return profiles;
 });
 
 // Provider that applies filters to the raw profiles

@@ -89,13 +89,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   // Top App Bar
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                        ),
-                      ),
                       const Expanded(
                         child: Text(
                           'Dately',

@@ -41,27 +41,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: profileAsync.when(
-        data: (profile) => Stack(
-          children: [
-            SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ... existing children built with 'profile' ...
-                  _buildTopAppBar(),
-                  _buildMainPhoto(profile),
-                  _buildNameSection(profile),
-                  _buildBioSection(profile),
-                  _buildDetailsList(profile),
-                  if (profile.topArtistImages != null)
-                    _buildSpotifySection(profile),
-                  const SizedBox(height: 100),
-                ],
+        data: (profile) {
+          // Reset index if it exceeds current photos length
+          if (profile.photos.isNotEmpty &&
+              _currentPhotoIndex >= profile.photos.length) {
+            _currentPhotoIndex = 0;
+          }
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTopAppBar(),
+                    _buildMainPhoto(profile),
+                    _buildNameSection(profile),
+                    _buildBioSection(profile),
+                    _buildDetailsList(profile),
+                    if (profile.topArtistImages != null)
+                      _buildSpotifySection(profile),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
-            ),
-            _buildFloatingEditButton(profile),
-          ],
-        ),
+              _buildFloatingEditButton(profile),
+            ],
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -34,59 +35,72 @@ class CachedImage extends StatelessWidget {
       );
     }
 
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
-      width: width,
-      height: height,
-      imageBuilder: (context, imageProvider) {
-        if (shape == BoxShape.circle) {
-          return Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                image: imageProvider,
-                fit: fit ?? BoxFit.cover,
-              ),
-            ),
-          );
-        }
-        return Container(
-          decoration: BoxDecoration(borderRadius: borderRadius),
-          clipBehavior: Clip.antiAlias,
-          child: Image(
-            image: imageProvider,
+    return imageUrl.startsWith('http')
+        ? CachedNetworkImage(
+            imageUrl: imageUrl,
             width: width,
             height: height,
-            fit: fit ?? BoxFit.cover,
-          ),
-        );
-      },
-      placeholder: (context, url) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          shape: shape,
-          borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
-        ),
-        child: const Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      errorWidget: (context, url, error) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          shape: shape,
-          borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
-        ),
-        child: Icon(Icons.error, color: Colors.grey.shade400),
-      ),
-    );
+            imageBuilder: (context, imageProvider) {
+              if (shape == BoxShape.circle) {
+                return Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: fit ?? BoxFit.cover,
+                    ),
+                  ),
+                );
+              }
+              return Container(
+                decoration: BoxDecoration(borderRadius: borderRadius),
+                clipBehavior: Clip.antiAlias,
+                child: Image(
+                  image: imageProvider,
+                  width: width,
+                  height: height,
+                  fit: fit ?? BoxFit.cover,
+                ),
+              );
+            },
+            placeholder: (context, url) => Container(
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: shape,
+                borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: shape,
+                borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
+              ),
+              child: Icon(Icons.error, color: Colors.grey.shade400),
+            ),
+          )
+        : Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(borderRadius: borderRadius, shape: shape),
+            clipBehavior: Clip.antiAlias,
+            child: Image.file(
+              File(imageUrl),
+              width: width,
+              height: height,
+              fit: fit ?? BoxFit.cover,
+            ),
+          );
   }
 }

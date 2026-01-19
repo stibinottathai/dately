@@ -403,6 +403,77 @@ class MatchesNotifier extends StateNotifier<MatchesState> {
           },
         )
         .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) async {
+            final deletedId = payload.oldRecord?['id'] as String?;
+            if (deletedId == null) return;
+
+            final userId = Supabase.instance.client.auth.currentUser?.id;
+            if (userId == null) return;
+
+            // Find if this message was a lastMessage for any conversation
+            final matchIndex = state.matches.indexWhere(
+              (m) => m.lastMessage?.id == deletedId,
+            );
+
+            if (matchIndex != -1) {
+              final matchId = state.matches[matchIndex].id;
+
+              // Fetch the new last message
+              final response = await Supabase.instance.client
+                  .from('messages')
+                  .select()
+                  .eq('match_id', matchId)
+                  .order('created_at', ascending: false)
+                  .limit(1)
+                  .maybeSingle();
+
+              Message? newLastMessage;
+              if (response != null) {
+                final senderId = response['sender_id'];
+                newLastMessage = Message(
+                  id: response['id'],
+                  conversationId: response['match_id'],
+                  senderId: senderId,
+                  receiverId: senderId == userId
+                      ? state.matches[matchIndex].otherUser.id
+                      : userId,
+                  content: response['content'],
+                  timestamp: DateTime.parse(response['created_at']),
+                  status: response['read_at'] != null
+                      ? MessageStatus.read
+                      : MessageStatus.delivered,
+                  isSentByMe: senderId == userId,
+                  type: (response['message_type'] as String?) == 'image'
+                      ? MessageType.image
+                      : (response['message_type'] as String?) == 'audio'
+                      ? MessageType.audio
+                      : MessageType.text,
+                );
+              }
+
+              final updatedMatches = List<Conversation>.from(state.matches);
+              updatedMatches[matchIndex] = Conversation(
+                id: updatedMatches[matchIndex].id,
+                otherUser: updatedMatches[matchIndex].otherUser,
+                lastMessage: newLastMessage,
+                unreadCount: updatedMatches[matchIndex].unreadCount,
+                isNewMatch: updatedMatches[matchIndex].isNewMatch,
+                isOnline: updatedMatches[matchIndex].isOnline,
+              );
+
+              state = MatchesState(
+                matches: updatedMatches,
+                isLoading: state.isLoading,
+                page: state.page,
+                hasMore: state.hasMore,
+              );
+            }
+          },
+        )
+        .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'matches',

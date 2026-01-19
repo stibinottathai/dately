@@ -1,13 +1,12 @@
+import 'package:dately/features/auth/presentation/forgot_password_screen.dart';
 import 'package:dately/features/auth/presentation/sign_in_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_1_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_2_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_3_screen.dart';
 import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_4_screen.dart';
-import 'package:dately/features/discovery/presentation/discovery_screen.dart';
-import 'package:dately/features/likes/presentation/likes_screen.dart';
 import 'package:dately/features/main/presentation/main_screen.dart';
 import 'package:dately/features/messages/presentation/chat_screen.dart';
-import 'package:dately/features/messages/presentation/messages_screen.dart';
+
 import 'package:dately/features/profile/domain/user_profile.dart';
 import 'package:dately/features/profile/presentation/edit_profile_screen.dart';
 import 'package:dately/features/onboarding/presentation/onboarding_screen.dart';
@@ -31,6 +30,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/sign-in',
         builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/sign-up/step-1',

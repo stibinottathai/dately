@@ -1,37 +1,32 @@
 import 'package:dately/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _onSignIn() async {
+  Future<void> _onResetPassword() async {
     final email = _emailController.text.trim();
-    final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
-      );
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your email')));
       return;
     }
 
@@ -40,13 +35,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
 
     try {
-      final response = await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
-        password: password,
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'io.dately.app://login-callback',
       );
-
-      if (response.user != null && mounted) {
-        context.go('/counter');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Check your email'),
+            content: Text('A password reset link has been sent to $email'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.pop(); // Go back to Sign In
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -86,9 +95,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             child: SafeArea(
               child: Column(
                 children: [
-                  // Top App Bar
                   Row(
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => context.pop(),
+                      ),
                       const Expanded(
                         child: Text(
                           'Dately',
@@ -104,7 +116,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ],
                   ),
                   const Spacer(),
-                  // Hero Section
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -112,14 +123,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.favorite,
+                      Icons.lock_reset,
                       color: Colors.white,
                       size: 48,
                     ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Welcome Back',
+                    'Forgot Password',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -129,7 +140,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Ready for a date? Sign in to see who\'s waiting for you.',
+                    'Enter your email to receive a reset link',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
@@ -162,7 +173,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Email Field
                     _buildLabel('Email'),
                     const SizedBox(height: 8),
                     TextField(
@@ -170,53 +180,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       decoration: _inputDecoration('Enter your email'),
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 20),
-
-                    // Password Field
-                    _buildLabel('Password'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      decoration: _inputDecoration('Enter your password')
-                          .copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isPasswordVisible
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isPasswordVisible = !_isPasswordVisible;
-                                });
-                              },
-                            ),
-                          ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          context.push('/forgot-password');
-                        },
-                        child: Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Sign In Button
+                    const SizedBox(height: 32),
                     SizedBox(
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _onSignIn,
+                        onPressed: _isLoading ? null : _onResetPassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -236,7 +204,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 ),
                               )
                             : const Text(
-                                'Sign In',
+                                'Send Reset Link',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -244,60 +212,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Social Divider
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Or continue with',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Social Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SocialButton(
-                            icon: Icons.g_mobiledata, // Placeholder for Google
-                            onPressed: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _SocialButton(
-                            icon: Icons.apple,
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Sign Up Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Don\'t have an account? ',
+                          'Remember your password? ',
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                         GestureDetector(
                           onTap: () {
-                            context.push('/sign-up/step-1');
+                            context.pop();
                           },
                           child: Text(
-                            'Sign Up',
+                            'Sign In',
                             style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
@@ -344,30 +272,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ),
       filled: true,
       fillColor: Theme.of(context).colorScheme.surface,
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _SocialButton({required this.icon, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          side: BorderSide(color: Colors.grey.shade300),
-        ),
-        child: Icon(icon, color: Colors.black87, size: 28),
-      ),
     );
   }
 }

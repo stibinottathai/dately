@@ -22,7 +22,13 @@ class ProfileDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
-  int _currentPhotoIndex = 0;
+  final ValueNotifier<int> _currentPhotoIndex = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _currentPhotoIndex.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -278,8 +284,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               itemCount: widget.profile.imageUrls.isNotEmpty
                   ? widget.profile.imageUrls.length
                   : 1,
-              onPageChanged: (index) =>
-                  setState(() => _currentPhotoIndex = index),
+              onPageChanged: (index) => _currentPhotoIndex.value = index,
               itemBuilder: (context, index) {
                 if (widget.profile.imageUrls.isEmpty) {
                   return CachedImage(
@@ -300,22 +305,27 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               Positioned(
                 top: 16,
                 right: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${_currentPhotoIndex + 1}/${widget.profile.imageUrls.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _currentPhotoIndex,
+                  builder: (context, index, child) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${index + 1}/${widget.profile.imageUrls.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
           ],

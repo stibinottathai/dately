@@ -98,6 +98,7 @@ class MessageBubble extends StatelessWidget {
                           child: CachedImage(
                             imageUrl: message.content,
                             width: 200,
+                            height: 250,
                             fit: BoxFit.cover,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -148,13 +149,13 @@ class MessageBubble extends StatelessWidget {
                       if (isSent) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          message.status == MessageStatus.read
-                              ? Icons.done_all
-                              : Icons.done,
-                          size: 14,
+                          message.status == MessageStatus.sent
+                              ? Icons.done
+                              : Icons.done_all,
+                          size: 16,
                           color: message.status == MessageStatus.read
                               ? AppColors.primary
-                              : Colors.grey.shade500,
+                              : Colors.grey.shade400,
                         ),
                       ],
                     ],

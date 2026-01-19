@@ -51,11 +51,55 @@ class ChatNotifier extends StateNotifier<ChatState> {
             value: matchId,
           ),
           callback: (payload) {
-            final newMessage = _mapMessage(payload.newRecord);
+            final newMessage = _mapMessage(payload.newRecord!);
             state = ChatState(
               messages: [newMessage, ...state.messages],
               isLoading: state.isLoading,
             );
+
+            // If message is not sent by me, mark as delivered
+            if (!newMessage.isSentByMe) {
+              markAsDelivered(newMessage.id, newMessage);
+            }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'match_id',
+            value: matchId,
+          ),
+          callback: (payload) {
+            final updatedMessage = _mapMessage(payload.newRecord!);
+            state = ChatState(
+              messages: state.messages
+                  .map((m) => m.id == updatedMessage.id ? updatedMessage : m)
+                  .toList(),
+              isLoading: state.isLoading,
+            );
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'messages',
+          // No filter for DELETE because match_id might not be in the payload
+          callback: (payload) {
+            final deletedId = payload.oldRecord?['id'] as String?;
+            if (deletedId != null) {
+              // Only remove if it exists in our list (avoids irrelevant deletes)
+              if (state.messages.any((m) => m.id == deletedId)) {
+                state = ChatState(
+                  messages: state.messages
+                      .where((m) => m.id != deletedId)
+                      .toList(),
+                  isLoading: state.isLoading,
+                );
+              }
+            }
           },
         )
         .subscribe();
@@ -77,18 +121,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> deleteMessage(String messageId) async {
+    // Optimistic update
+    final previousMessages = state.messages;
+    state = ChatState(
+      messages: state.messages.where((m) => m.id != messageId).toList(),
+      isLoading: state.isLoading,
+    );
+
     try {
       await Supabase.instance.client
           .from('messages')
           .delete()
           .eq('id', messageId);
-
-      state = ChatState(
-        messages: state.messages.where((m) => m.id != messageId).toList(),
-        isLoading: state.isLoading,
-      );
     } catch (e) {
       print('Error deleting message: $e');
+      // Revert on error
+      state = ChatState(messages: previousMessages, isLoading: state.isLoading);
     }
   }
 
@@ -139,6 +187,25 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (userId == null) return;
 
     try {
+      // Optimistic update
+      final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      final tempMessage = Message(
+        id: tempId,
+        conversationId: matchId,
+        senderId: userId,
+        receiverId: '',
+        content: imagePath,
+        timestamp: DateTime.now(),
+        status: MessageStatus.sent,
+        isSentByMe: true,
+        type: MessageType.image,
+      );
+
+      state = ChatState(
+        messages: [tempMessage, ...state.messages],
+        isLoading: state.isLoading,
+      );
+
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$userId.jpg';
       final file = File(imagePath);
 
@@ -157,8 +224,54 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'content': imageUrl,
         'message_type': 'image',
       });
+
+      // Remove temp message after successful insert
+      // The real message will come via subscription
+      state = ChatState(
+        messages: state.messages.where((m) => m.id != tempId).toList(),
+        isLoading: state.isLoading,
+      );
     } catch (e) {
       print('Error sending image: $e');
+      // Remove temp message on error
+      state = ChatState(
+        messages: state.messages
+            .where((m) => !m.id.startsWith('temp_'))
+            .toList(),
+        isLoading: state.isLoading,
+      );
+    }
+  }
+
+  Future<void> markAsRead(String messageId) async {
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .update({'read_at': DateTime.now().toIso8601String()})
+          .eq('id', messageId);
+    } catch (e) {
+      print('Error marking as read: $e');
+    }
+  }
+
+  Future<void> markAsDelivered(String messageId, Message message) async {
+    if (message.status == MessageStatus.read ||
+        message.status == MessageStatus.delivered)
+      return;
+
+    try {
+      final currentMetadata = message.metadata ?? {};
+      await Supabase.instance.client
+          .from('messages')
+          .update({
+            'metadata': {
+              ...currentMetadata,
+              'delivered_at': DateTime.now().toIso8601String(),
+            },
+          })
+          .eq('id', messageId);
+    } catch (e) {
+      print('Error marking as delivered: $e');
     }
   }
 
@@ -172,6 +285,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
         ? MessageType.audio
         : MessageType.text;
 
+    final metadata = data['metadata'] as Map<String, dynamic>?;
+    MessageStatus status = MessageStatus.sent;
+
+    if (data['read_at'] != null) {
+      status = MessageStatus.read;
+    } else if (metadata != null && metadata['delivered_at'] != null) {
+      status = MessageStatus.delivered;
+    }
+
     return Message(
       id: data['id'],
       conversationId: data['match_id'],
@@ -180,10 +302,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           '', // Ideally we know this from match context, but optional for display
       content: data['content'],
       timestamp: DateTime.parse(data['created_at']),
-      status: data['read_at'] != null ? MessageStatus.read : MessageStatus.sent,
+      status: status,
       isSentByMe: senderId == userId,
       type: type,
-      metadata: data['metadata'],
+      metadata: metadata,
     );
   }
 

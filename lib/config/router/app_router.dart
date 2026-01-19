@@ -7,6 +7,8 @@ import 'package:dately/features/auth/presentation/sign_up/steps/sign_up_step_4_s
 import 'package:dately/features/main/presentation/main_screen.dart';
 import 'package:dately/features/messages/presentation/chat_screen.dart';
 
+import 'package:dately/features/discovery/domain/profile.dart';
+import 'package:dately/features/discovery/presentation/profile_detail_screen.dart';
 import 'package:dately/features/profile/domain/user_profile.dart';
 import 'package:dately/features/profile/presentation/edit_profile_screen.dart';
 import 'package:dately/features/onboarding/presentation/onboarding_screen.dart';
@@ -78,6 +80,13 @@ GoRouter router(Ref ref) {
         builder: (context, state) {
           final profile = state.extra as UserProfile;
           return EditProfileScreen(profile: profile);
+        },
+      ),
+      GoRoute(
+        path: '/profile-detail',
+        builder: (context, state) {
+          final profile = state.extra as Profile;
+          return ProfileDetailScreen(profile: profile);
         },
       ),
     ],
